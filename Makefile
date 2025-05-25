@@ -5,22 +5,17 @@ PREFIX=/usr/local
 BINDIR=$(PREFIX)/bin
 MANDIR=$(PREFIX)/share/man
 
-# if we are on Darwin (macOS) use COREMIDI, otherwise use ALSA
-UNAME_S := $(shell uname -s)
-ifeq ($(UNAME_S),Darwin)
-COREMIDI ?= y
-ALSA ?= n
-else
-COREMIDI ?= n
-ALSA ?= y
-endif
-
 -include config.mk
 
+OS!=uname
+OS?=$(shell uname)
+OS-$(OS)=y
+ALSA?=$(OS-Linux)
 ALSA_CFLAGS?=$$(pkg-config --cflags alsa)
 ALSA_LDFLAGS?=$$(pkg-config --libs-only-L --libs-only-other alsa)
 ALSA_LDLIBS?=$$(pkg-config --libs-only-l alsa)
 
+COREMIDI?=$(OS-Darwin)
 COREMIDI_LDLIBS?=-framework CoreMIDI -framework CoreFoundation
 
 GTK?=y
@@ -28,8 +23,8 @@ WEB?=n
 
 BIN=oscmix $(BIN-y)
 BIN-$(ALSA)+=alsarawio alsaseqio
-BIN-$(WEB)+=wsdgram
 BIN-$(COREMIDI)+=coremidiio
+BIN-$(WEB)+=wsdgram
 
 TARGET=$(BIN) $(TARGET-y)
 TARGET-$(GTK)+=gtk
@@ -47,7 +42,8 @@ web:
 
 DEVICES=\
 	device_ff802.o\
-	device_ffucxii.o
+	device_ffucxii.o\
+	device_ffufxiii.o
 
 OSCMIX_OBJ=\
 	main.o\
@@ -110,7 +106,7 @@ clean:
 		wsdgram $(WSDGRAM_OBJ)\
 		alsarawio alsarawio.o\
 		alsaseqio alsaseqio.o\
-		coremidiio coremidiio.o\
-		fatal.o spawn.o
+		coremidiio coremidiio.o fatal.o spawn.o
+
 	$(MAKE) -C gtk clean
 	$(MAKE) -C web clean
