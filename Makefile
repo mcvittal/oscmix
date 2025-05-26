@@ -84,6 +84,15 @@ alsaseqio.o: alsaseqio.c
 alsaseqio: alsaseqio.o
 	$(CC) $(LDFLAGS) $(ALSA_LDFLAGS) -o $@ alsaseqio.o $(ALSA_LDLIBS) -l pthread
 
+coremidiio.o: coremidiio.c
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c -o $@ coremidiio.c
+
+fatal.o: fatal.c
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c -o $@ fatal.c
+
+spawn.o: spawn.c
+	$(CC) $(CPPFLAGS) $(CFLAGS) -c -o $@ spawn.c
+
 coremidiio: $(COREMIDIIO_OBJ)
 	$(CC) $(LDFLAGS) -o $@ $(COREMIDIIO_OBJ) $(COREMIDI_LDLIBS)
 

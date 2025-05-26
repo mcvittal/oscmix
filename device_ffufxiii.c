@@ -6,23 +6,42 @@
 #define LEN(a) (sizeof (a) / sizeof *(a))
 
 static const char *const reflevel_input[] = {"+13dBu", "+19dBu"};
-static const char *const reflevel_output[] = {"+4dBu", "+13dBu", "+19dBu", "+24dBu"};
+static const char *const reflevel_output_xlr[] = {"+4dBu", "+13dBu", "+19dBu", "+24dBu"};
+static const char *const reflevel_output[] = {"+4dBu", "+13dBu", "+19dBu"};
 static const char *const reflevel_phones[] = {"Low", "High"};
 
+#define GAIN_MIC_MIN 0
+#define GAIN_MIC_MAX 750
+#define GAIN_INST_MIN 80
+#define GAIN_INST_MAX 500
+
 static const struct channelinfo inputs[] = {
-    {"Analogue 1",  INPUT_HAS_GAIN | INPUT_HAS_REFLEVEL, .reflevel={reflevel_input, LEN(reflevel_input)}},
-    {"Analogue 2",  INPUT_HAS_GAIN | INPUT_HAS_REFLEVEL, .reflevel={reflevel_input, LEN(reflevel_input)}},
-    {"Analogue 3",  INPUT_HAS_GAIN | INPUT_HAS_REFLEVEL, .reflevel={reflevel_input, LEN(reflevel_input)}},
-    {"Analogue 4",  INPUT_HAS_GAIN | INPUT_HAS_REFLEVEL, .reflevel={reflevel_input, LEN(reflevel_input)}},
-    {"Analogue 5",  INPUT_HAS_GAIN | INPUT_HAS_REFLEVEL, .reflevel={reflevel_input, LEN(reflevel_input)}},
-    {"Analogue 6",  INPUT_HAS_GAIN | INPUT_HAS_REFLEVEL, .reflevel={reflevel_input, LEN(reflevel_input)}},
-    {"Analogue 7",  INPUT_HAS_GAIN | INPUT_HAS_REFLEVEL, .reflevel={reflevel_input, LEN(reflevel_input)}},
-    {"Analogue 8",  INPUT_HAS_GAIN | INPUT_HAS_REFLEVEL, .reflevel={reflevel_input, LEN(reflevel_input)}},
-    // Gain is 0-75dB for mic, 8-50dB for inst
-    {"Mic/Inst 9",  INPUT_HAS_GAIN | INPUT_HAS_48V | INPUT_HAS_AUTOSET | INPUT_HAS_HIZ, .gain={0, 750}},
-    {"Mic/Inst 10", INPUT_HAS_GAIN | INPUT_HAS_48V | INPUT_HAS_AUTOSET | INPUT_HAS_HIZ, .gain={0, 750}},
-    {"Mic/Inst 11", INPUT_HAS_GAIN | INPUT_HAS_48V | INPUT_HAS_AUTOSET | INPUT_HAS_HIZ, .gain={0, 750}},
-    {"Mic/Inst 12", INPUT_HAS_GAIN | INPUT_HAS_48V | INPUT_HAS_AUTOSET | INPUT_HAS_HIZ, .gain={0, 750}},
+	{"Analog 1",  INPUT_HAS_GAIN | INPUT_HAS_REFLEVEL, .gain={0, 120}, .reflevel={reflevel_input, LEN(reflevel_input)}},
+    {"Analog 2",  INPUT_HAS_GAIN | INPUT_HAS_REFLEVEL, .gain={0, 120}, .reflevel={reflevel_input, LEN(reflevel_input)}},
+    {"Analog 3",  INPUT_HAS_GAIN | INPUT_HAS_REFLEVEL, .gain={0, 120}, .reflevel={reflevel_input, LEN(reflevel_input)}},
+    {"Analog 4",  INPUT_HAS_GAIN | INPUT_HAS_REFLEVEL, .gain={0, 120}, .reflevel={reflevel_input, LEN(reflevel_input)}},
+    {"Analog 5",  INPUT_HAS_GAIN | INPUT_HAS_REFLEVEL, .gain={0, 120}, .reflevel={reflevel_input, LEN(reflevel_input)}},
+    {"Analog 6",  INPUT_HAS_GAIN | INPUT_HAS_REFLEVEL, .gain={0, 120}, .reflevel={reflevel_input, LEN(reflevel_input)}},
+    {"Analog 7",  INPUT_HAS_GAIN | INPUT_HAS_REFLEVEL, .gain={0, 120}, .reflevel={reflevel_input, LEN(reflevel_input)}},
+    {"Analog 8",  INPUT_HAS_GAIN | INPUT_HAS_REFLEVEL, .gain={0, 120}, .reflevel={reflevel_input, LEN(reflevel_input)}},
+	// TODO: Change device.h (and probably in oscmix.h/c) to get this working
+	/*
+	 {"Mic/Inst 9",  INPUT_HAS_GAIN | INPUT_HAS_48V | INPUT_HAS_AUTOSET | INPUT_HAS_HIZ,
+			.gain={GAIN_MIC_MIN, GAIN_MIC_MAX},
+		.inst_gain={GAIN_INST_MIN, GAIN_INST_MAX}},
+	{"Mic/Inst 10", INPUT_HAS_GAIN | INPUT_HAS_48V | INPUT_HAS_AUTOSET | INPUT_HAS_HIZ,
+			.gain={GAIN_MIC_MIN, GAIN_MIC_MAX},
+		.inst_gain={GAIN_INST_MIN, GAIN_INST_MAX}},
+	{"Mic/Inst 11", INPUT_HAS_GAIN | INPUT_HAS_48V | INPUT_HAS_AUTOSET | INPUT_HAS_HIZ,
+			.gain={GAIN_MIC_MIN, GAIN_MIC_MAX},
+		.inst_gain={GAIN_INST_MIN, GAIN_INST_MAX}},
+	{"Mic/Inst 12", INPUT_HAS_GAIN | INPUT_HAS_48V | INPUT_HAS_AUTOSET | INPUT_HAS_HIZ,
+			.gain={GAIN_MIC_MIN, GAIN_MIC_MAX},
+		.inst_gain={GAIN_INST_MIN, GAIN_INST_MAX}},*/
+	{"Mic/Inst 9",  INPUT_HAS_GAIN | INPUT_HAS_48V | INPUT_HAS_AUTOSET | INPUT_HAS_HIZ, .gain={0, 750}},
+	{"Mic/Inst 10", INPUT_HAS_GAIN | INPUT_HAS_48V | INPUT_HAS_AUTOSET | INPUT_HAS_HIZ, .gain={0, 750}},
+	{"Mic/Inst 11", INPUT_HAS_GAIN | INPUT_HAS_48V | INPUT_HAS_AUTOSET | INPUT_HAS_HIZ, .gain={0, 750}},
+	{"Mic/Inst 12", INPUT_HAS_GAIN | INPUT_HAS_48V | INPUT_HAS_AUTOSET | INPUT_HAS_HIZ, .gain={0, 750}},
     // AES
 	{"AES L"}, {"AES R"},
     // ADAT
@@ -42,8 +61,8 @@ static const struct channelinfo inputs[] = {
 _Static_assert(LEN(inputs) == 94, "bad inputs");
 
 static const struct channelinfo outputs[] = {
-	{"Analog 1", OUTPUT_HAS_REFLEVEL, .reflevel={reflevel_output, LEN(reflevel_output)}},
-	{"Analog 2", OUTPUT_HAS_REFLEVEL, .reflevel={reflevel_output, LEN(reflevel_output)}},
+	{"Analog 1", OUTPUT_HAS_REFLEVEL, .reflevel={reflevel_output_xlr, LEN(reflevel_output_xlr)}},
+	{"Analog 2", OUTPUT_HAS_REFLEVEL, .reflevel={reflevel_output_xlr, LEN(reflevel_output_xlr)}},
 	{"Analog 3", OUTPUT_HAS_REFLEVEL, .reflevel={reflevel_output, LEN(reflevel_output)}},
 	{"Analog 4", OUTPUT_HAS_REFLEVEL, .reflevel={reflevel_output, LEN(reflevel_output)}},
 	{"Analog 5", OUTPUT_HAS_REFLEVEL, .reflevel={reflevel_output, LEN(reflevel_output)}},
@@ -106,6 +125,8 @@ static enum control eq_dyn_reg_to_ctl(int const reg) {
     }
 }
 
+#define DYN_METER_BASE 0x3264
+#define AUTO_LEVEL_BASE 0x3328
 #define ROOM_EQ_BASE 0x3427
 
 #define MIX_REGION_SIZE (LEN(inputs) * 2 * 64)  // Inputs, playbacks 64 output slots
@@ -217,7 +238,28 @@ regtoctl(int reg, struct param *p)
             case 0x3202: return HARDWARE_DSPSTATUS;
             case 0x3203: return HARDWARE_ARCDELTA;
 
-            case 0x33FD: return REFRESH;
+			// TODO: This is a guess, need to be confirmed
+			case 0x33FD: return REFRESH; // Indicator for refresh done
+
+			// Durec status [r]
+			case 0x3580: return DUREC_STATUS;
+			case 0x3581: return DUREC_TIME;
+			case 0x3582: return UNKNOWN;
+			case 0x3583: return DUREC_USBLOAD;
+			case 0x3584: return DUREC_TOTALSPACE;
+			case 0x3585: return DUREC_FREESPACE;
+			case 0x3586: return DUREC_NUMFILES;
+			case 0x3587: return DUREC_FILE;
+			case 0x3588: return DUREC_NEXT;
+			case 0x3589: return DUREC_RECORDTIME;
+			case 0x358A: return DUREC_INDEX;
+			case 0x358B: return DUREC_NAME0;
+			case 0x358C: return DUREC_NAME1;
+			case 0x358D: return DUREC_NAME2;
+			case 0x358E: return DUREC_NAME3;
+			case 0x358F: return DUREC_INFO;
+			case 0x3590: return DUREC_LENGTH;
+
         }
         if (reg >= ROOM_EQ_BASE) {
             p->out = (reg - ROOM_EQ_BASE) / 0x20;
@@ -320,134 +362,157 @@ static int roomeqreg(int const idx, int const reg) {
 
 static int ctltoreg(enum control ctl, const struct param *p)
 {
-    switch (ctl) {
-        case INPUT_MUTE:        return inputctltoreg(p->in, 0x00);
-        case INPUT_FXSEND:      return inputctltoreg(p->in, 0x01);
-        case INPUT_STEREO:      return inputctltoreg(p->in, 0x02);
-        case INPUT_RECORD:      return inputctltoreg(p->in, 0x03);
-        // 0x04 UNKNOWN
-        case INPUT_PLAYCHAN:    return inputctltoreg(p->in, 0x05);
-        // case INPUT_WIDTH:       return inputctltoreg(p->in, 0x06);  // Doesn't exist on UCX2
-        case INPUT_MSPROC:      return inputctltoreg(p->in, 0x07);
-        case INPUT_PHASE:       return inputctltoreg(p->in, 0x08);
-        case INPUT_GAIN:        return inputctltoreg(p->in, 0x09);
-        case INPUT_REFLEVEL:    return inputctltoregflag(p->in, 0x0A, INPUT_HAS_REFLEVEL);
-        case INPUT_48V:         return inputctltoregflag(p->in, 0x0A, INPUT_HAS_48V);
-        case INPUT_AUTOSET:     return inputctltoregflag(p->in, 0x0C, INPUT_HAS_AUTOSET);
-        case INPUT_HIZ:         return inputctltoregflag(p->in, 0x0B, INPUT_HAS_HIZ);
+	int reg, idx, flags;
+	if ((unsigned)p->in < LEN(inputs)) {
+		flags = inputs[p->in].flags;
+		idx = p->in;
+	} else if ((unsigned)p->out < LEN(outputs)) {
+		flags = outputs[p->out].flags;
+		idx = 94 + p->out;
+	}
 
-        case OUTPUT_VOLUME:     return outputctltoreg(p->out, 0x00);
-        case OUTPUT_PAN:        return outputctltoreg(p->out, 0x01);
-        case OUTPUT_MUTE:       return outputctltoreg(p->out, 0x02);
-        case OUTPUT_FXRETURN:   return outputctltoreg(p->out, 0x03);
-        case OUTPUT_STEREO:     return outputctltoreg(p->out, 0x04);
-        case OUTPUT_RECORD:     return outputctltoreg(p->out, 0x05);
-        case OUTPUT_PLAYCHAN:   return outputctltoreg(p->out, 0x06);
-        case OUTPUT_PHASE:      return outputctltoreg(p->out, 0x07);
-        case OUTPUT_REFLEVEL:   return outputctltoreg(p->out, 0x08);
-        case OUTPUT_CROSSFEED:  return outputctltoreg(p->out, 0x09);
-        // 0x0A UNKNOWN
-        case OUTPUT_VOLUMECAL:  return outputctltoreg(p->out, 0x0B);
+	switch (ctl) {
+		// Inputs
+		case INPUT_MUTE:        return inputctltoreg(p->in, 0x00);
+		case INPUT_FXSEND:      return inputctltoreg(p->in, 0x01);
+		case INPUT_STEREO:      return inputctltoreg(p->in, 0x02);
+		case INPUT_RECORD:      return inputctltoreg(p->in, 0x03);
+		// 0x04 UNKNOWN
+		case INPUT_PLAYCHAN:    return inputctltoreg(p->in, 0x05);
+		// case INPUT_WIDTH:       return inputctltoreg(p->in, 0x06);
+		case INPUT_MSPROC:      return inputctltoreg(p->in, 0x07);
+		case INPUT_PHASE:       return inputctltoreg(p->in, 0x08);
+		case INPUT_GAIN:        if (!(flags & INPUT_HAS_GAIN)) break;
+								return inputctltoreg(p->in, 0x09);
+		case INPUT_REFLEVEL:    if (!(flags & INPUT_HAS_REFLEVEL)) break;
+								return inputctltoreg(p->in, 0x0A);
+		case INPUT_48V:         if (!(flags & INPUT_HAS_48V)) break;
+								return inputctltoreg(p->in, 0x0A);
+		case INPUT_HIZ:         if (!(flags & INPUT_HAS_HIZ)) break;
+								return inputctltoreg(p->in, 0x0B);
+		case INPUT_AUTOSET:		if (!(flags & INPUT_HAS_AUTOSET)) break;
+								return inputctltoreg(p->in, 0x0C);
+		// Outputs
+		case OUTPUT_VOLUME:     return outputctltoreg(p->out, 0x00);
+		case OUTPUT_PAN:        return outputctltoreg(p->out, 0x01);
+		case OUTPUT_MUTE:       return outputctltoreg(p->out, 0x02);
+		case OUTPUT_FXRETURN:   return outputctltoreg(p->out, 0x03);
+		case OUTPUT_STEREO:     return outputctltoreg(p->out, 0x04);
+		case OUTPUT_RECORD:     return outputctltoreg(p->out, 0x05);
+		case OUTPUT_PLAYCHAN:   return outputctltoreg(p->out, 0x06);
+		case OUTPUT_PHASE:      return outputctltoreg(p->out, 0x07);
+		case OUTPUT_REFLEVEL:   return outputctltoreg(p->out, 0x08);
+		case OUTPUT_CROSSFEED:  return outputctltoreg(p->out, 0x09);
+			// 0x0A UNKNOWN
+		case OUTPUT_VOLUMECAL:  return outputctltoreg(p->out, 0x0B);
 
-        // THE EQ/DYN stuff has different offsets depending on whether we're input or output... so how can we tell?
-        // If we're outputting then ->in will be -1 and vice versa... I think.
-        case LOWCUT:            return eqctltoreg(p, 0x00);
-        case LOWCUT_FREQ:       return eqctltoreg(p, 0x01);
-        case LOWCUT_SLOPE:      return eqctltoreg(p, 0x02);
-        case EQ:                return eqctltoreg(p, 0x03);
-        case EQ_BAND1TYPE:      return eqctltoreg(p, 0x04);
-        case EQ_BAND1GAIN:      return eqctltoreg(p, 0x05);
-        case EQ_BAND1FREQ:      return eqctltoreg(p, 0x06);
-        case EQ_BAND1Q:         return eqctltoreg(p, 0x07);
-        case EQ_BAND2GAIN:      return eqctltoreg(p, 0x08);
-        case EQ_BAND2FREQ:      return eqctltoreg(p, 0x09);
-        case EQ_BAND2Q:         return eqctltoreg(p, 0x0A);
-        case EQ_BAND3TYPE:      return eqctltoreg(p, 0x0B);
-        case EQ_BAND3GAIN:      return eqctltoreg(p, 0x0C);
-        case EQ_BAND3FREQ:      return eqctltoreg(p, 0x0D);
-        case EQ_BAND3Q:         return eqctltoreg(p, 0x0E);
-        case DYNAMICS:          return eqctltoreg(p, 0x0F);
-        case DYNAMICS_GAIN:     return eqctltoreg(p, 0x10);
-        case DYNAMICS_ATTACK:   return eqctltoreg(p, 0x11);
-        case DYNAMICS_RELEASE:  return eqctltoreg(p, 0x12);
-        case DYNAMICS_COMPTHRES:return eqctltoreg(p, 0x13);
-        case DYNAMICS_COMPRATIO:return eqctltoreg(p, 0x14);
-        case DYNAMICS_EXPTHRES: return eqctltoreg(p, 0x15);
-        case DYNAMICS_EXPRATIO: return eqctltoreg(p, 0x16);
-        case AUTOLEVEL:         return eqctltoreg(p, 0x17);
-        case AUTOLEVEL_MAXGAIN: return eqctltoreg(p, 0x18);
-        case AUTOLEVEL_HEADROOM:return eqctltoreg(p, 0x19);
-        case AUTOLEVEL_RISETIME:return eqctltoreg(p, 0x1A);
+			// THE EQ/DYN stuff has different offsets depending on whether we're input or output... so how can we tell?
+			// If we're outputting then ->in will be -1 and vice versa... I think.
+		case LOWCUT:            return eqctltoreg(p, 0x00);
+		case LOWCUT_FREQ:       return eqctltoreg(p, 0x01);
+		case LOWCUT_SLOPE:      return eqctltoreg(p, 0x02);
+		case EQ:                return eqctltoreg(p, 0x03);
+		case EQ_BAND1TYPE:      return eqctltoreg(p, 0x04);
+		case EQ_BAND1GAIN:      return eqctltoreg(p, 0x05);
+		case EQ_BAND1FREQ:      return eqctltoreg(p, 0x06);
+		case EQ_BAND1Q:         return eqctltoreg(p, 0x07);
+		case EQ_BAND2GAIN:      return eqctltoreg(p, 0x08);
+		case EQ_BAND2FREQ:      return eqctltoreg(p, 0x09);
+		case EQ_BAND2Q:         return eqctltoreg(p, 0x0A);
+		case EQ_BAND3TYPE:      return eqctltoreg(p, 0x0B);
+		case EQ_BAND3GAIN:      return eqctltoreg(p, 0x0C);
+		case EQ_BAND3FREQ:      return eqctltoreg(p, 0x0D);
+		case EQ_BAND3Q:         return eqctltoreg(p, 0x0E);
+		case DYNAMICS:          return eqctltoreg(p, 0x0F);
+		case DYNAMICS_GAIN:     return eqctltoreg(p, 0x10);
+		case DYNAMICS_ATTACK:   return eqctltoreg(p, 0x11);
+		case DYNAMICS_RELEASE:  return eqctltoreg(p, 0x12);
+		case DYNAMICS_COMPTHRES:return eqctltoreg(p, 0x13);
+		case DYNAMICS_COMPRATIO:return eqctltoreg(p, 0x14);
+		case DYNAMICS_EXPTHRES: return eqctltoreg(p, 0x15);
+		case DYNAMICS_EXPRATIO: return eqctltoreg(p, 0x16);
+		case AUTOLEVEL:         return eqctltoreg(p, 0x17);
+		case AUTOLEVEL_MAXGAIN: return eqctltoreg(p, 0x18);
+		case AUTOLEVEL_HEADROOM:return eqctltoreg(p, 0x19);
+		case AUTOLEVEL_RISETIME:return eqctltoreg(p, 0x1A);
 
-        case REVERB:            return 0x3000;
-        case REVERB_TYPE:       return 0x3001;
-        case REVERB_PREDELAY:   return 0x3002;
-        case REVERB_LOWCUT:     return 0x3003;
-        case REVERB_ROOMSCALE:  return 0x3004;
-        case REVERB_ATTACK:     return 0x3005;
-        case REVERB_HOLD:       return 0x3006;
-        case REVERB_RELEASE:    return 0x3007;
-        case REVERB_HIGHCUT:    return 0x3008;
-        case REVERB_TIME:       return 0x3009;
-        case REVERB_HIGHDAMP:   return 0x300A;
-        case REVERB_SMOOTH:     return 0x300B;
-        case REVERB_VOLUME:     return 0x300C;
-        case REVERB_WIDTH:      return 0x300D;
-        case ECHO:              return 0x3014;
-        case ECHO_TYPE:         return 0x3015;
-        case ECHO_DELAY:        return 0x3016;
-        case ECHO_FEEDBACK:     return 0x3017;
-        case ECHO_HIGHCUT:      return 0x3018;
-        case ECHO_VOLUME:       return 0x3019;
-        case ECHO_WIDTH:        return 0x301A;
+		case REVERB:            return 0x3000;
+		case REVERB_TYPE:       return 0x3001;
+		case REVERB_PREDELAY:   return 0x3002;
+		case REVERB_LOWCUT:     return 0x3003;
+		case REVERB_ROOMSCALE:  return 0x3004;
+		case REVERB_ATTACK:     return 0x3005;
+		case REVERB_HOLD:       return 0x3006;
+		case REVERB_RELEASE:    return 0x3007;
+		case REVERB_HIGHCUT:    return 0x3008;
+		case REVERB_TIME:       return 0x3009;
+		case REVERB_HIGHDAMP:   return 0x300A;
+		case REVERB_SMOOTH:     return 0x300B;
+		case REVERB_VOLUME:     return 0x300C;
+		case REVERB_WIDTH:      return 0x300D;
+		case ECHO:              return 0x3014;
+		case ECHO_TYPE:         return 0x3015;
+		case ECHO_DELAY:        return 0x3016;
+		case ECHO_FEEDBACK:     return 0x3017;
+		case ECHO_HIGHCUT:      return 0x3018;
+		case ECHO_VOLUME:       return 0x3019;
+		case ECHO_WIDTH:        return 0x301A;
 
-        case MIX:
-            if (p->in < 0 || p->in >= LEN(inputs) || p->out < 0 || p->out >= LEN(outputs))
-                return -1;
-            return 0x4000 | p->out << 6 | p->in;
-        // How do playbacks work? They'd be the next chunk.
-        // MIX_LEVEL not on wiki
+		case MIX:
+			if (p->in < 0 || p->in >= LEN(inputs) || p->out < 0 || p->out >= LEN(outputs))
+				return -1;
+			return 0x4000 | p->out << 6 | p->in;
+			// How do playbacks work? They'd be the next chunk.
+			// MIX_LEVEL not on wiki
 
-        case ROOMEQ_DELAY:       return roomeqreg(p->out, 0x00);
-        case ROOMEQ:             return roomeqreg(p->out, 0x01);
-        case ROOMEQ_BAND1TYPE:   return roomeqreg(p->out, 0x02);
-        case ROOMEQ_BAND1GAIN:   return roomeqreg(p->out, 0x03);
-        case ROOMEQ_BAND1FREQ:   return roomeqreg(p->out, 0x04);
-        case ROOMEQ_BAND1Q:      return roomeqreg(p->out, 0x05);
-        case ROOMEQ_BAND2GAIN:   return roomeqreg(p->out, 0x06);
-        case ROOMEQ_BAND2FREQ:   return roomeqreg(p->out, 0x07);
-        case ROOMEQ_BAND2Q:      return roomeqreg(p->out, 0x08);
-        case ROOMEQ_BAND3GAIN:   return roomeqreg(p->out, 0x09);
-        case ROOMEQ_BAND3FREQ:   return roomeqreg(p->out, 0x0A);
-        case ROOMEQ_BAND3Q:      return roomeqreg(p->out, 0x0B);
-        case ROOMEQ_BAND4GAIN:   return roomeqreg(p->out, 0x0C);
-        case ROOMEQ_BAND4FREQ:   return roomeqreg(p->out, 0x0D);
-        case ROOMEQ_BAND4Q:      return roomeqreg(p->out, 0x0E);
-        case ROOMEQ_BAND5GAIN:   return roomeqreg(p->out, 0x0F);
-        case ROOMEQ_BAND5FREQ:   return roomeqreg(p->out, 0x10);
-        case ROOMEQ_BAND5Q:      return roomeqreg(p->out, 0x11);
-        case ROOMEQ_BAND6GAIN:   return roomeqreg(p->out, 0x12);
-        case ROOMEQ_BAND6FREQ:   return roomeqreg(p->out, 0x13);
-        case ROOMEQ_BAND6Q:      return roomeqreg(p->out, 0x14);
-        case ROOMEQ_BAND7GAIN:   return roomeqreg(p->out, 0x15);
-        case ROOMEQ_BAND7FREQ:   return roomeqreg(p->out, 0x16);
-        case ROOMEQ_BAND7Q:      return roomeqreg(p->out, 0x17);
-        case ROOMEQ_BAND8TYPE:   return roomeqreg(p->out, 0x18);
-        case ROOMEQ_BAND8GAIN:   return roomeqreg(p->out, 0x19);
-        case ROOMEQ_BAND8FREQ:   return roomeqreg(p->out, 0x1A);
-        case ROOMEQ_BAND8Q:      return roomeqreg(p->out, 0x1B);
-        case ROOMEQ_BAND9TYPE:   return roomeqreg(p->out, 0x1C);
-        case ROOMEQ_BAND9GAIN:   return roomeqreg(p->out, 0x1D);
-        case ROOMEQ_BAND9FREQ:   return roomeqreg(p->out, 0x1E);
-        case ROOMEQ_BAND9Q:      return roomeqreg(p->out, 0x1F);
+		case ROOMEQ_DELAY:       return roomeqreg(p->out, 0x00);
+		case ROOMEQ:             return roomeqreg(p->out, 0x01);
+		case ROOMEQ_BAND1TYPE:   return roomeqreg(p->out, 0x02);
+		case ROOMEQ_BAND1GAIN:   return roomeqreg(p->out, 0x03);
+		case ROOMEQ_BAND1FREQ:   return roomeqreg(p->out, 0x04);
+		case ROOMEQ_BAND1Q:      return roomeqreg(p->out, 0x05);
+		case ROOMEQ_BAND2GAIN:   return roomeqreg(p->out, 0x06);
+		case ROOMEQ_BAND2FREQ:   return roomeqreg(p->out, 0x07);
+		case ROOMEQ_BAND2Q:      return roomeqreg(p->out, 0x08);
+		case ROOMEQ_BAND3GAIN:   return roomeqreg(p->out, 0x09);
+		case ROOMEQ_BAND3FREQ:   return roomeqreg(p->out, 0x0A);
+		case ROOMEQ_BAND3Q:      return roomeqreg(p->out, 0x0B);
+		case ROOMEQ_BAND4GAIN:   return roomeqreg(p->out, 0x0C);
+		case ROOMEQ_BAND4FREQ:   return roomeqreg(p->out, 0x0D);
+		case ROOMEQ_BAND4Q:      return roomeqreg(p->out, 0x0E);
+		case ROOMEQ_BAND5GAIN:   return roomeqreg(p->out, 0x0F);
+		case ROOMEQ_BAND5FREQ:   return roomeqreg(p->out, 0x10);
+		case ROOMEQ_BAND5Q:      return roomeqreg(p->out, 0x11);
+		case ROOMEQ_BAND6GAIN:   return roomeqreg(p->out, 0x12);
+		case ROOMEQ_BAND6FREQ:   return roomeqreg(p->out, 0x13);
+		case ROOMEQ_BAND6Q:      return roomeqreg(p->out, 0x14);
+		case ROOMEQ_BAND7GAIN:   return roomeqreg(p->out, 0x15);
+		case ROOMEQ_BAND7FREQ:   return roomeqreg(p->out, 0x16);
+		case ROOMEQ_BAND7Q:      return roomeqreg(p->out, 0x17);
+		case ROOMEQ_BAND8TYPE:   return roomeqreg(p->out, 0x18);
+		case ROOMEQ_BAND8GAIN:   return roomeqreg(p->out, 0x19);
+		case ROOMEQ_BAND8FREQ:   return roomeqreg(p->out, 0x1A);
+		case ROOMEQ_BAND8Q:      return roomeqreg(p->out, 0x1B);
+		case ROOMEQ_BAND9TYPE:   return roomeqreg(p->out, 0x1C);
+		case ROOMEQ_BAND9GAIN:   return roomeqreg(p->out, 0x1D);
+		case ROOMEQ_BAND9FREQ:   return roomeqreg(p->out, 0x1E);
+		case ROOMEQ_BAND9Q:      return roomeqreg(p->out, 0x1F);
 
-        case HARDWARE_DSPVERLOAD:return 0x3200;
-        case HARDWARE_DSPAVAIL:  return 0x3201;
-        case HARDWARE_DSPSTATUS: return 0x3202;
-        case HARDWARE_ARCDELTA:  return 0x3203;
+		case HARDWARE_DSPVERLOAD:return 0x3200;
+		case HARDWARE_DSPAVAIL:  return 0x3201;
+		case HARDWARE_DSPSTATUS: return 0x3202;
+		case HARDWARE_ARCDELTA:  return 0x3203;
 
-        case REFRESH:            return 0x3E03;
-    }
+		case REFRESH:            return 0x3E03; // Reg for dump
+
+		case DUREC_CONTROL:           return 0x3E9A;
+		case DUREC_DELETE:            return 0x3E9B;
+		case DUREC_FILE:              return 0x3E9C;
+		case DUREC_SEEK:              return 0x3E9D;
+		case DUREC_PLAYMODE:          return 0x3EA0;
+		default: break;
+
+	}
 	return -1;
 }
 
@@ -455,7 +520,7 @@ const struct device ffufxiii = {
 	.id = "ffufxiii",
 	.name = "Fireface UFX III",
 	.version = 0,
-	.flags = /*DEVICE_HAS_DUREC |*/ DEVICE_HAS_ROOMEQ,  // Does have DUREC, but don't know where all the regs are yet
+	.flags = DEVICE_HAS_DUREC | DEVICE_HAS_ROOMEQ,
 	.inputs = inputs,
 	.inputslen = LEN(inputs),
 	.outputs = outputs,

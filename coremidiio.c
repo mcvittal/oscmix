@@ -21,37 +21,20 @@ usage(void)
 }
 
 static void
-epdesc(MIDIObjectRef obj, char *buf, size_t len)
+epname(MIDIObjectRef obj, char *buf, size_t len)
 {
-	char *pos, *end;
-	CFStringRef model, name;
+	CFStringRef name;
 	CFIndex used;
 	CFRange range;
 	OSStatus err;
 
-	if (len == 0)
-		return;
-	pos = buf;
-	end = buf + len - 1;
-	err = MIDIObjectGetStringProperty(obj, kMIDIPropertyModel, &model);
+	err = MIDIObjectGetStringProperty(obj, kMIDIPropertyDisplayName, &name);
 	if (err)
-		model = 0;
-	err = MIDIObjectGetStringProperty(obj, kMIDIPropertyName, &name);
-	if (err)
-		name = 0;
-	if (model) {
-		range = CFRangeMake(0, CFStringGetLength(model));
-		CFStringGetBytes(model, range, kCFStringEncodingUTF8, '?', false, (unsigned char *)pos, end - pos, &used);
-		pos += used;
-	}
-	if (name && (!model || CFStringCompare(model, name, 0) != kCFCompareEqualTo)) {
-		if (pos != buf && pos != end)
-			*pos++ = ' ';
-		range = CFRangeMake(0, CFStringGetLength(name));
-		CFStringGetBytes(name, range, kCFStringEncodingUTF8, '?', false, (unsigned char *)pos, end - pos, &used);
-		pos += used;
-	}
-	*pos = '\0';
+		fatal("MIDIObjectGetStringProperty: %d", err);
+	range = CFRangeMake(0, CFStringGetLength(name));
+	CFStringGetBytes(name, range, kCFStringEncodingUTF8, 0, false, (uint8_t *)buf, len - 1, &used);
+	CFRelease(name);
+	buf[used] = '\0';
 }
 
 static void
@@ -59,22 +42,22 @@ listports(void)
 {
 	ItemCount i, n;
 	MIDIEndpointRef ep;
-	char desc[256];
+	char name[256];
 
 	printf("Sources:\n");
 	n = MIDIGetNumberOfSources();
 	for (i = 0; i < n; ++i) {
 		ep = MIDIGetSource(i);
-		epdesc(ep, desc, sizeof desc);
-		printf("%d\t%s\n", (int)i, desc);
+		epname(ep, name, sizeof name);
+		printf("%d\t%s\n", (int)i, name);
 	}
 
 	printf("\nDestinations:\n");
 	n = MIDIGetNumberOfDestinations();
 	for (i = 0; i < n; ++i) {
 		ep = MIDIGetDestination(i);
-		epdesc(ep, desc, sizeof desc);
-		printf("%d\t%s\n", (int)i, desc);
+		epname(ep, name, sizeof name);
+		printf("%d\t%s\n", (int)i, name);
 	}
 }
 
@@ -219,7 +202,7 @@ handleinput(CFFileDescriptorRef file, CFOptionFlags flags, void *info)
 }
 
 static void
-initreader(struct context *ctx, MIDIClientRef client, int index, int fd)
+initreader(struct context *ctx, MIDIClientRef client, CFStringRef name, int index, int fd)
 {
 	int err;
 
@@ -228,7 +211,7 @@ initreader(struct context *ctx, MIDIClientRef client, int index, int fd)
 		ctx->ep = MIDIGetSource(index);
 		if (!ctx->ep)
 			fatal("MIDIGetSource %d failed", index);
-		err = MIDIInputPortCreate(client, CFSTR(""), midiread, ctx, &ctx->port);
+		err = MIDIInputPortCreate(client, name, midiread, ctx, &ctx->port);
 		if (err)
 			fatal("MIDIInputPortCreate: %d", err);
 		err = MIDIPortConnectSource(ctx->port, ctx->ep, NULL);
@@ -236,14 +219,14 @@ initreader(struct context *ctx, MIDIClientRef client, int index, int fd)
 			fatal("MIDIPortConnectSource: %d", err);
 	} else {
 		ctx->port = 0;
-		err = MIDIDestinationCreate(client, CFSTR("coremidiio"), midiread, ctx, &ctx->ep);
+		err = MIDIDestinationCreate(client, name, midiread, ctx, &ctx->ep);
 		if (err)
 			fatal("MIDIDestinationCreate: %d");
 	}
 }
 
 static void
-initwriter(struct context *ctx, MIDIClientRef client, int index, int fd)
+initwriter(struct context *ctx, MIDIClientRef client, CFStringRef name, int index, int fd)
 {
 	CFFileDescriptorRef file;
 	CFFileDescriptorContext filectx;
@@ -255,12 +238,12 @@ initwriter(struct context *ctx, MIDIClientRef client, int index, int fd)
 		ctx->ep = MIDIGetDestination(index);
 		if (!ctx->ep)
 			fatal("MIDIGetDestination %d failed", index);
-		err = MIDIOutputPortCreate(client, CFSTR(""), &ctx->port);
+		err = MIDIOutputPortCreate(client, name, &ctx->port);
 		if (err)
 			fatal("MIDIOutputPortCreate: %d", err);
 	} else {
 		ctx->port = 0;
-		err = MIDISourceCreate(client, CFSTR("coremidiio"), &ctx->ep);
+		err = MIDISourceCreate(client, name, &ctx->ep);
 		if (err)
 			fatal("MIDISourceCreate: %d", err);
 	}
@@ -325,31 +308,36 @@ main(int argc, char *argv[])
 	MIDIClientRef client;
 	OSStatus err;
 	int port[2], fd[2];
-	char *arg, *end;
+	CFStringRef name;
 	int mode;
-	long n;
 	struct context ctx[2];
 
 	port[0] = -1;
 	port[1] = -1;
 	fd[0] = 0;
 	fd[1] = 1;
+	name = CFSTR("coremidiio");
 	mode = 0;
 	ARGBEGIN {
 	case 'l':
 		listports();
 		return 0;
-	case 'p':
-		parseintpair(EARGF(usage()), port);
-		break;
-	case 'f':
-		parseintpair(EARGF(usage()), fd);
-		break;
 	case 'r':
 		mode |= READ;
 		break;
 	case 'w':
 		mode |= WRITE;
+		break;
+	case 'n':
+		name = CFStringCreateWithCStringNoCopy(NULL, EARGF(usage()), kCFStringEncodingUTF8, kCFAllocatorNull);
+		if (!name)
+			fatal("CFStringCreateWithCStringNoCopy failed");
+		break;
+	case 'p':
+		parseintpair(EARGF(usage()), port);
+		break;
+	case 'f':
+		parseintpair(EARGF(usage()), fd);
 		break;
 	default:
 		usage();
@@ -360,12 +348,12 @@ main(int argc, char *argv[])
 	if (argc)
 		spawn(argv[0], argv, mode, fd);
 
-	err = MIDIClientCreate(CFSTR("coremidiio"), notify, ctx, &client);
+	err = MIDIClientCreate(name, notify, ctx, &client);
 	if (err)
 		fatal("MIDIClientCreate: %d", err);
 	if (mode & READ)
-		initreader(&ctx[0], client, port[0], fd[1]);
+		initreader(&ctx[0], client, name, port[0], fd[1]);
 	if (mode & WRITE)
-		initwriter(&ctx[1], client, port[1], fd[0]);
+		initwriter(&ctx[1], client, name, port[1], fd[0]);
 	CFRunLoopRun();
 }
