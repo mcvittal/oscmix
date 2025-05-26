@@ -1,0 +1,833 @@
+## Registers
+
+### Inputs
+
+| Register | Description                | Details                                    |  Notes (x=verified) |
+| -------- | -------------------------- | ------------------------------------------ | --------------- |
+| 0000     | AN 1 mute                  | 0=off 1=on                                 | x               |
+| 0001     | AN 1 fx send               | 1/10 fixed point, -65.0dB-0.0dB            | x               |
+| 0002     | AN 1 stereo                | 0=off 1=on                                 | x               |
+| 0003     | AN 1 record                | 0=off 1=on                                 | x               |
+| 0004     | AN 1 Channel Name?         | All channels set to 0xa                    | x               |
+| 0005     | AN 1 play channel          | 0=off 1=1/2 2=2/3 ... 79=79/80             | x               |
+| 0006     | AN 1 width                 | 1/100 fixed point, -1.00-1.00              |-1=ff9c,0=0000,+1=0064 x|
+| 0007     | AN 1 msproc                | 0=off 1=on                                 | x               |
+| 0008     | AN 1 phase invert          | 0=off 1=on                                 | x               |
+| 0009     | AN 1 gain                  | 1/10 fixed point, 0.0dB-12.0dB             | x               |
+| 000A     | AN 1 reflevel              | 0=+13 dBu 1=+19dBu                         | x               |
+| 000D     | AN 1 low cut enabled       | 0=off 1=on                                 | x               |
+| 000E     | AN 1 low cut freq          | 20Hz-500Hz                                 | x               |
+| 000F     | AN 1 low cut slope         | 0=6dB/oct 1=12dB/oct 2=18dB/oct 3=24dB/oct | x               |
+| 0010     | AN 1 eq enabled            | 0=off 1=on                                 | x               |
+| 0011     | AN 1 eq band 1 type        | 0=Peak 1=Low Shelf 2=High Pass 3=Low Pass  | x               |
+| 0012     | AN 1 eq band 1 gain        | 1/10 fixed point, -20.0dB-20.0dB           | x               |
+| 0013     | AN 1 eq band 1 freq        | 20Hz-20000Hz                               | x               |
+| 0014     | AN 1 eq band 1 q           | 1/10 fixed point, 0.4-9.9                  | x               |
+| 0015     | AN 1 eq band 2 gain        | 1/10 fixed point, -20.0dB-20.0dB           | x               |
+| 0016     | AN 1 eq band 2 freq        | 20Hz-20000Hz                               | x               |
+| 0017     | AN 1 eq band 2 q           | 1/10 fixed point, 0.4-9.9                  | x               |
+| 0018     | AN 1 eq band 3 type        | 0=Peak 1=High Shelf 2=Low Pass 3=High Pass | x               |
+| 0019     | AN 1 eq band 3 gain        | 1/10 fixed point, -20.0dB-20.0dB           | x               |
+| 001A     | AN 1 eq band 3 freq        | 20Hz-20000Hz                               | x               |
+| 001B     | AN 1 eq band 3 q           | 1/10 fixed point, 0.4-9.9                  | x               |
+| 001C     | AN 1 dynamics enabled      | 0=off 1=on                                 | x               |
+| 001D     | AN 1 dynamics gain         | 1/10 fixed point, -30.0dB-30.0dB           | x               |
+| 001E     | AN 1 dynamics attack       | 0-200                                      | x               |
+| 001F     | AN 1 dynamics release      | 100-999                                    | x               |
+| 0020     | AN 1 dynamics comp. thres. | 1/10 fixed point, -60.0dB-0.0dB            | x               |
+| 0021     | AN 1 dynamics comp. ratio  | 1/10 fixed point, 1.0-10.0                 | x               |
+| 0022     | AN 1 dynamics exp. thres.  | 1/10 fixed point, -99.0dB--20.0dB          | x               |
+| 0023     | AN 1 dynamics exp. ratio   | 1/10 fixed point, 1.0-10.0                 | x               |
+| 0024     | AN 1 autolevel enabled     | 0=off 1=on                                 | x               |
+| 0025     | AN 1 autolevel max gain    | 1/10 fixed point, 0.0dB-18.0dB             | x               |
+| 0026     | AN 1 autolevel headroom    | 1/10 fixed point, 3.0dB-12.0dB             | x               |
+| 0027     | AN 1 autolevel rise time   | 1/10 fixed point, 0.1-9.9                  | x               |
+| ---      | ---                        |---                                         |                 |
+| 0030     | AN 2 mute                  | 0=off 1=on                                 | x               |
+| 0031     | AN 2 fx send               | 1/10 fixed point, -65.0dB-0.0dB            | x               |
+| 0032     | AN 2 stereo                | 0=off 1=on                                 | x               |
+| 0033     | AN 2 record                | 0=off 1=on                                 | x               |
+| 0034     | AN 2 Channel Name?         | All chennels set to 0xa                    | x               |
+| 0035     | AN 2 play channel          | 0=off 1=1/2 2=2/3 ... 79=79/80             | x               |
+| 0036     | AN 2 width                 | 1/100 fixed point, -1.00-1.00              |-=ff9c,0=0000,+1=0064 x|
+| 0037     | AN 2 msproc                | 0=off 1=on                                 | x               |
+| 0038     | AN 2 phase invert          | 0=off 1=on                                 | x               |
+| 0039     | AN 2 gain                  | 1/10 fixed point, 0.0dB-12.0dB             | x               |
+| 003A     | AN 2 reflevel              | 0=+13 dBu 1=+19dBu                         | x               |
+| 003D     | AN 2 low cut enabled       | 0=off 1=on                                 | x               |
+| 003E     | AN 2 low cut freq          | 20Hz-500Hz                                 | x               |
+| 003F     | AN 2 low cut slope         | 0=6dB/oct 1=12dB/oct 2=18dB/oct 3=24dB/oct | x               |
+| 0040     | AN 2 eq enabled            | 0=off 1=on                                 | x               |
+| 0041     | AN 2 eq band 1 type        | 0=Peak 1=Low Shelf 2=High Pass 3=Low Pass  | x               |
+| 0042     | AN 2 eq band 1 gain        | 1/10 fixed point, -20.0dB-20.0dB           | x               |
+| 0043     | AN 2 eq band 1 freq        | 20Hz-20000Hz                               | x               |
+| 0044     | AN 2 eq band 1 q           | 1/10 fixed point, 0.4-9.9                  | x               |
+| 0045     | AN 2 eq band 2 gain        | 1/10 fixed point, -20.0dB-20.0dB           | x               |
+| 0046     | AN 2 eq band 2 freq        | 20Hz-20000Hz                               | x               |
+| 0047     | AN 2 eq band 2 q           | 1/10 fixed point, 0.4-9.9                  | x               |
+| 0048     | AN 2 eq band 3 type        | 0=Peak 1=High Shelf 2=Low Pass 3=High Pass | x               |
+| 0049     | AN 2 eq band 3 gain        | 1/10 fixed point, -20.0dB-20.0dB           | x               |
+| 004A     | AN 2 eq band 3 freq        | 20Hz-20000Hz                               | x               |
+| 004B     | AN 2 eq band 3 q           | 1/10 fixed point, 0.4-9.9                  | x               |
+| 004C     | AN 2 dynamics enabled      | 0=off 1=on                                 | x               |
+| 004D     | AN 2 dynamics gain         | 1/10 fixed point, -30.0dB-30.0dB           | x               |
+| 004E     | AN 2 dynamics attack       | 0-200                                      | x               |
+| 004F     | AN 2 dynamics release      | 100-999                                    | x               |
+| 0050     | AN 2 dynamics comp. thres. | 1/10 fixed point, -60.0dB-0.0dB            | x               |
+| 0051     | AN 2 dynamics comp. ratio  | 1/10 fixed point, 1.0-10.0                 | x               |
+| 0052     | AN 2 dynamics exp. thres.  | 1/10 fixed point, -99.0dB--20.0dB          | x               |
+| 0053     | AN 2 dynamics exp. ratio   | 1/10 fixed point, 1.0-10.0                 | x               |
+| 0054     | AN 2 autolevel enabled     | 0=off 1=on                                 | x               |
+| 0055     | AN 2 autolevel max gain    | 1/10 fixed point, 0.0dB-18.0dB             | x               |
+| 0056     | AN 2 autolevel headroom    | 1/10 fixed point, 3.0dB-12.0dB             | x               |
+| 0057     | AN 2 autolevel rise time   | 1/10 fixed point, 0.1-9.9                  | x               |
+| ---      | ---                        |---                                         |                 |
+| 0060     | AN3 mute                   | 0=off 1=on                                 | x               |
+| 0061     | AN3 fx send                | 1/10 fixed point, -65.0dB-0.0dB            | x               |
+| 0062     | AN3 stereo                 | 0=off 1=on                                 | x               |
+| 0063     | AN3 record                 | 0=off 1=on                                 | x               |
+| 0064     | AN3 Channel Name?          | All chennels set to 0xa                    | x               |
+| 0065     | AN3 play channel           | 0=off 1=1/2 2=2/3 ... 79=79/80             | x               |
+| 0066     | AN3 width                  | 1/100 fixed point, -1.00-1.00              |-1=ff9c,0=0000,+1=0064 |
+| 0067     | AN3 msproc                 | 0=off 1=on                                 | x               |
+| 0068     | AN3 phase invert           | 0=off 1=on                                 | x               |
+| 0069     | AN3 gain                   | 1/10 fixed point, 0.0dB-12.0dB             | x               |
+| 006A     | AN3 reflevel               | 0=+13 dBu 1=+19dBu                         | x               |
+| 006D     | AN3 low cut enabled        | 0=off 1=on                                 | x               |
+| 006E     | AN3 low cut freq           | 20Hz-500Hz                                 | x               |
+| 006F     | AN3 low cut slope          | 0=6dB/oct 1=12dB/oct 2=18dB/oct 3=24dB/oct | x               |
+| 0070     | AN3 eq enabled             | 0=off 1=on                                 | x               |
+| 0071     | AN3 eq band 1 type         | 0=Peak 1=Low Shelf 2=High Pass 3=Low Pass  | x               |
+| 0072     | AN3 eq band 1 gain         | 1/10 fixed point, -20.0dB-20.0dB           | x               |
+| 0073     | AN3 eq band 1 freq         | 20Hz-20000Hz                               | x               |
+| 0074     | AN3 eq band 1 q            | 1/10 fixed point, 0.4-9.9                  | x               |
+| 0075     | AN3 eq band 2 gain         | 1/10 fixed point, -20.0dB-20.0dB           | x               |
+| 0076     | AN3 eq band 2 freq         | 20Hz-20000Hz                               | x               |
+| 0077     | AN3 eq band 2 q            | 1/10 fixed point, 0.4-9.9                  | x               |
+| 0078     | AN3 eq band 3 type         | 0=Peak 1=High Shelf 2=Low Pass 3=High Pass | x               |
+| 0079     | AN3 eq band 3 gain         | 1/10 fixed point, -20.0dB-20.0dB           | x               |
+| 007A     | AN3 eq band 3 freq         | 20Hz-20000Hz                               | x               |
+| 007B     | AN3 eq band 3 q            | 1/10 fixed point, 0.4-9.9                  | x               |
+| 007C     | AN3 dynamics enabled       | 0=off 1=on                                 | x               |
+| 007D     | AN3 dynamics gain          | 1/10 fixed point, -30.0dB-30.0dB           | x               |
+| 007E     | AN3 dynamics attack        | 0-200                                      | x               |
+| 007F     | AN3 dynamics release       | 100-999                                    | x               |
+| 0080     | AN3 dynamics comp. thres.  | 1/10 fixed point, -60.0dB-0.0dB            | x               |
+| 0081     | AN3 dynamics comp. ratio   | 1/10 fixed point, 1.0-10.0                 | x               |
+| 0082     | AN3 dynamics exp. thres.   | 1/10 fixed point, -99.0dB--20.0dB          | x               |
+| 0083     | AN3 dynamics exp. ratio    | 1/10 fixed point, 1.0-10.0                 | x               |
+| 0084     | AN3 autolevel enabled      | 0=off 1=on                                 | x               |
+| 0085     | AN3 autolevel max gain     | 1/10 fixed point, 0.0dB-18.0dB             | x               |
+| 0086     | AN3 autolevel headroom     | 1/10 fixed point, 3.0dB-12.0dB             | x               |
+| 0087     | AN3 autolevel rise time    | 1/10 fixed point, 0.1-9.9                  | x               |
+| ---      | ---                        |---                                         |                 |
+| 0090     | AN 4                       |                                            |                 |
+| 00C0     | AN 5                       |                                            |                 |
+| 00F0     | AN 6                       |                                            |                 |
+| 0120     | AN 7                       |                                            |                 |
+| 0150     | AN 8                       |                                            |                 |
+| ---      | ---                        |---                                         |                 |
+| 0180     | Mic/inst 9 mute            | 0=off 1=on                                 |x                |
+| 018A     | Mic 9 48v                  | 0=off 1=on                                 |x|
+| 018B     | Mic 9 hi-z                 | 0=off 1=on                                 |x|
+| 018C     | Mic 9 autoset              | 0=off 1=on                                 |x|
+| ---      | ---                        |---                                         |                 |
+| 01B0     | Mic/inst 10 mute           | 0=off 1=on                                 |x                |
+| 01BA     | Mic 10 48v                 | 0=off 1=on                                 |x|
+| 01BB     | Mic 10 hi-z                | 0=off 1=on                                 |x|
+| 01BC     | Mic 10 autoset             | 0=off 1=on                                 |x|
+| ---      | ---                        |---                                         |                 |
+| 01E0     | Mic/inst 11 mute           | 0=off 1=on                                 |x                |
+| 01EA     | Mic 11 48v                 | 0=off 1=on                                 |x|
+| 01EB     | Mic 11 hi-z                | 0=off 1=on                                 |x|
+| 01EC     | Mic 11 autoset             | 0=off 1=on                                 |x|
+| ---      | ---                        |---                                         |                 |
+| 0210     | Mic/inst 12 mute           | 0=off 1=on                                 |x                |
+| 021A     | Mic 12 48v                 | 0=off 1=on                                 |x|
+| 021B     | Mic 12 hi-z                | 0=off 1=on                                 |x|
+| 021C     | Mic 12 autoset             | 0=off 1=on                                 |x|
+| ---      | ---                        |---                                         |                 |
+| 0240     | AES L                      |                                            |                 |
+| 0270     | AES R                      |                                            |                 |
+| 02A0     | ADAT 1                     |                                            |                 |
+| 02D0     | ADAT 2                     |                                            |                 |
+| 0300     | ADAT 3                     |                                            |                 |
+| 0330     | ADAT 4                     |                                            |                 |
+| 0360     | ADAT 5                     |                                            |                 |
+| 0390     | ADAT 6                     |                                            |                 |
+| 03C0     | ADAT 7                     |                                            |                 |
+| 03F0     | ADAT 8                     |                                            |                 |
+| 0420     | ADAT 9                     |                                            |                 |
+| 0450     | ADAT 10                    |                                            |                 |
+| 0480     | ADAT 11                    |                                            |                 |
+| 04B0     | ADAT 12                    |                                            |                 |
+| 04E0     | ADAT 13                    |                                            |                 |
+| 0510     | ADAT 14                    |                                            |                 |
+| 0540     | ADAT 15                    |                                            |                 |
+| 0570     | ADAT 16                    |                                            |                 |
+| 05A0     | MAo 1                      |                                            |                 |
+| 05D0     | MAo 2                      |                                            |                 |
+| 0600     | MAo 3                      |                                            |                 |
+| 0630     | MAo 4                      |                                            |                 |
+| 0660     | MAo 5                      |                                            |                 |
+| 0690     | MAo 6                      |                                            |                 |
+| 06C0     | MAo 7                      |                                            |                 |
+| 06F0     | MAo 8                      |                                            |                 |
+| 0720     | MAo 9                      |                                            |                 |
+| 0750     | MAo 10                     |                                            |                 |
+| 0780     | MAo 11                     |                                            |                 |
+| 07B0     | MAo 12                     |                                            |                 |
+| 07E0     | MAo 13                     |                                            |                 |
+| 0810     | MAo 14                     |                                            |                 |
+| 0840     | MAo 15                     |                                            |                 |
+| 0870     | MAo 16                     |                                            |                 |
+| 08A0     | MAo 17                     |                                            |                 |
+| 08D0     | MAo 18                     |                                            |                 |
+| 0900     | MAo 19                     |                                            |                 |
+| 0930     | MAo 20                     |                                            |                 |
+| 0960     | MAo 21                     |                                            |                 |
+| 0990     | MAo 22                     |                                            |                 |
+| 09C0     | MAo 23                     |                                            |                 |
+| 09F0     | MAo 24                     |                                            |                 |
+| 0A20     | MAo 25                     |                                            |                 |
+| 0A50     | MAo 26                     |                                            |                 |
+| 0A80     | MAo 27                     |                                            |                 |
+| 0AB0     | MAo 28                     |                                            |                 |
+| 0AE0     | MAo 29                     |                                            |                 |
+| 0B10     | MAo 30                     |                                            |                 |
+| 0B40     | MAo 31                     |                                            |                 |
+| 0B70     | MAo 32                     |                                            |                 |
+| 0BA0     | MAc 1                      |                                            |                 |
+| 0BD0     | MAc 2                      |                                            |                 |
+| 0C00     | MAc 3                      |                                            |                 |
+| 0C30     | MAc 4                      |                                            |                 |
+| 0C60     | MAc 5                      |                                            |                 |
+| 0C90     | MAc 6                      |                                            |                 |
+| 0CC0     | MAc 7                      |                                            |                 |
+| 0CF0     | MAc 8                      |                                            |                 |
+| 0D20     | MAc 9                      |                                            |                 |
+| 0D50     | MAc 10                     |                                            |                 |
+| 0D80     | MAc 11                     |                                            |                 |
+| 0DB0     | MAc 12                     |                                            |                 |
+| 0DE0     | MAc 13                     |                                            |                 |
+| 0E10     | MAc 14                     |                                            |                 |
+| 0E40     | MAc 15                     |                                            |                 |
+| 0E70     | MAc 16                     |                                            |                 |
+| 0EA0     | MAc 17                     |                                            |                 |
+| 0ED0     | MAc 18                     |                                            |                 |
+| 0F00     | MAc 19                     |                                            |                 |
+| 0F30     | MAc 20                     |                                            |                 |
+| 0F60     | MAc 21                     |                                            |                 |
+| 0F90     | MAc 22                     |                                            |                 |
+| 0FC0     | MAc 23                     |                                            |                 |
+| 0FF0     | MAc 24                     |                                            |                 |
+| 1020     | MAc 25                     |                                            |                 |
+| 1050     | MAc 26                     |                                            |                 |
+| 1080     | MAc 27                     |                                            |                 |
+| 10B0     | MAc 28                     |                                            |                 |
+| 10E0     | MAc 29                     |                                            |                 |
+| 1110     | MAc 30                     |                                            |                 |
+| 1140     | MAc 31                     |                                            |                 |
+| 1170     | MAc 32                     |                                            |                 |
+
+### Outputs
+
+| Register | Description                | Details                                    |Notes (x=verified)|
+| -------- | -------------------------- | ------------------------------------------ |-----------------|
+| 11A0     | AN 1 volume                | 1/10 fixed point, -65.0dB-6.0dB            |x                |
+| 11A1     | AN 1 balance               | -100-100                                   |x                |
+| 11A2     | AN 1 mute                  | 0=off 1=on                                 |x                |
+| 11A3     | AN 1 fx return             | 1/10 fixed point, -65.0dB-0.0dB            |x                |
+| 11A4     | AN 1 stereo                | 0=off 1=on                                 |x                |
+| 11A5     | AN 1 record                | 0=off 1=on                                 |x                |
+| 11A6     | AN 1 play channel          | 0=off 1=1/2 2=2/3 ... 59=59/60             |x                |
+| 11A7     | AN 1 phase invert          | 0=off 1=invert                             |x                |
+| 11A8     | AN 1 level                 | 0=-10dBV, 1=+4dBu, 2=Hi Gain 3=+24dBu      |x                |
+| 11A9     | AN 1 crossfeed             | 0=off, 1-5                                 |x                |
+| 11AA     | AN 1 ?                     |                                            |                 |
+| 11AB     | AN 1 volume cal.           | 1/100 fixed point, -24.00dB-3.00dB         |x                |
+| 11AC     | AN 1 low cut enabled       | 0=off 1=on                                 |x                |
+| 11AD     | AN 1 low cut freq          | 20Hz-500Hz                                 |x                |
+| 11AE     | AN 1 low cut slope         | 0=6dB/oct 1=12dB/oct 2=18dB/oct 3=24dB/oct |x                |
+| 11AF     | AN 1 eq enabled            | 0=off 1=on                                 |x                |
+| 11B0     | AN 1 eq band 1 type        | 0=Peak 1=Low Shelf 2=High Pass 3=Low Pass  |x                |
+| 11B1     | AN 1 eq band 1 gain        | 1/10 fixed point, -20.0dB-20.0dB           |x                |
+| 11B2     | AN 1 eq band 1 freq        | 20Hz-20000Hz                               |x                |
+| 11B3     | AN 1 eq band 1 q           | 1/10 fixed point, 0.4-9.9                  |x                |
+| 11B4     | AN 1 eq band 2 gain        | 1/10 fixed point, -20.0dB-20.0dB           |x                |
+| 11B5     | AN 1 eq band 2 freq        | 20Hz-20000Hz                               |x                |
+| 11B6     | AN 1 eq band 2 q           | 1/10 fixed point, 0.4-9.9                  |x                |
+| 11B7     | AN 1 eq band 3 type        | 0=Peak 1=High Shelf 2=Low Pass 3=High Pass |x                |
+| 11B8     | AN 1 eq band 3 gain        | 1/10 fixed point, -20.0dB-20.0dB           |x                |
+| 11B9     | AN 1 eq band 3 freq        | 20Hz-20000Hz                               |x                |
+| 11BA     | AN 1 eq band 3 q           | 1/10 fixed point, 0.4-9.9                  |x                |
+| 11BB     | AN 1 dynamics enabled      | 0=off 1=on                                 |x                |
+| 11BC     | AN 1 dynamics gain         | 1/10 fixed point, -30.0dB-30.0dB           |x                |
+| 11BD     | AN 1 dynamics attack       | 0-200                                      |x                |
+| 11BE     | AN 1 dynamics release      | 100-999                                    |x                |
+| 11BF     | AN 1 dynamics comp. thres. | 1/10 fixed point, -60.0dB-0.0dB            |x                |
+| 11C0     | AN 1 dynamics comp. ratio  | 1/10 fixed point, 1.0-10.0                 |x                |
+| 11C1     | AN 1 dynamics exp. thres.  | 1/10 fixed point, -99.0dB--20.0dB          |x                |
+| 11C2     | AN 1 dynamics exp. ratio   | 1/10 fixed point, 1.0-10.0                 |x                |
+| 11C3     | AN 1 autolevel enabled     | 0=off 1=on                                 |x                |
+| 11C4     | AN 1 autolevel max gain    | 1/10 fixed point, 0.0dB-18.0dB             |x                |
+| 11C5     | AN 1 autolevel headroom    | 1/10 fixed point, 3.0dB-12.0dB             |x                |
+| 11C6     | AN 1 autolevel rise time   | 1/10 fixed point, 0.1-9.9                  |x                |
+| 11D0     | AN 2 volume                | 1/10 fixed point, -65.0-6.0                |x                |
+| ...      | ...                        | ...                                        |                 |
+| 1200     | AN 3                       |                                            |                 |
+| 1230     | AN 4                       |                                            |                 |
+| 1260     | AN 5                       |                                            |                 |
+| 1290     | AN 6                       |                                            |                 |
+| 12C0     | AN 7                       |                                            |                 |
+| 12F0     | AN 8                       |                                            |                 |
+| 1320     | PH 9                       |                                            |                 |
+| 1350     | PH 10                      |                                            |                 |
+| 1380     | PH 11                      |                                            |                 |
+| 13B0     | PH 12                      |                                            |                 |
+| 13E0     | AES L                      |                                            |                 |
+| 1410     | AES R                      |                                            |                 |
+| 1440     | ADAT 1                     |                                            |                 |
+| 1470     | ADAT 2                     |                                            |                 |
+| 14A0     | ADAT 3                     |                                            |                 |
+| 14D0     | ADAT 4                     |                                            |                 |
+| 1500     | ADAT 5                     |                                            |                 |
+| 1530     | ADAT 6                     |                                            |                 |
+| 1560     | ADAT 7                     |                                            |                 |
+| 1590     | ADAT 8                     |                                            |                 |
+| 15C0     | ADAT 9                     |                                            |                 |
+| 15F0     | ADAT 10                    |                                            |                 |
+| 1620     | ADAT 11                    |                                            |                 |
+| 1650     | ADAT 12                    |                                            |                 |
+| 1680     | ADAT 13                    |                                            |                 |
+| 16B0     | ADAT 14                    |                                            |                 |
+| 16E0     | ADAT 15                    |                                            |                 |
+| 1710     | ADAT 16                    |                                            |                 |
+| 1740     | MA 1                       |                                            |                 |
+| 1770     | MA 2                       |                                            |                 |
+| 17A0     | MA 3                       |                                            |                 |
+| 17D0     | MA 4                       |                                            |                 |
+| 1800     | MA 5                       |                                            |                 |
+| 1830     | MA 6                       |                                            |                 |
+| 1860     | MA 7                       |                                            |                 |
+| 1890     | MA 8                       |                                            |                 |
+| 18C0     | MA 9                       |                                            |                 |
+| 18F0     | MA 10                      |                                            |                 |
+| 1920     | MA 11                      |                                            |                 |
+| 1950     | MA 12                      |                                            |                 |
+| 1980     | MA 13                      |                                            |                 |
+| 19B0     | MA 14                      |                                            |                 |
+| 19E0     | MA 15                      |                                            |                 |
+| 1A10     | MA 16                      |                                            |                 |
+| 1A40     | MA 17                      |                                            |                 |
+| 1A70     | MA 18                      |                                            |                 |
+| 1AA0     | MA 19                      |                                            |                 |
+| 1AD0     | MA 20                      |                                            |                 |
+| 1B00     | MA 21                      |                                            |                 |
+| 1B30     | MA 22                      |                                            |                 |
+| 1B60     | MA 23                      |                                            |                 |
+| 1B90     | MA 24                      |                                            |                 |
+| 1BC0     | MA 25                      |                                            |                 |
+| 1BF0     | MA 26                      |                                            |                 |
+| 1C20     | MA 27                      |                                            |                 |
+| 1C50     | MA 28                      |                                            |                 |
+| 1C80     | MA 29                      |                                            |                 |
+| 1CB0     | MA 30                      |                                            |                 |
+| 1CE0     | MA 31                      |                                            |                 |
+| 1D10     | MA 32                      |                                            |                 |
+| 1D40     | MA 33                      |                                            |                 |
+| 1D70     | MA 34                      |                                            |                 |
+| 1DA0     | MA 35                      |                                            |                 |
+| 1DD0     | MA 36                      |                                            |                 |
+| 1E00     | MA 37                      |                                            |                 |
+| 1E30     | MA 38                      |                                            |                 |
+| 1E60     | MA 39                      |                                            |                 |
+| 1E90     | MA 40                      |                                            |                 |
+| 1EC0     | MA 41                      |                                            |                 |
+| 1EF0     | MA 42                      |                                            |                 |
+| 1F20     | MA 43                      |                                            |                 |
+| 1F50     | MA 44                      |                                            |                 |
+| 1F80     | MA 45                      |                                            |                 |
+| 1FB0     | MA 46                      |                                            |                 |
+| 1FE0     | MA 47                      |                                            |                 |
+| 2010     | MA 48                      |                                            |                 |
+| 2040     | MA 49                      |                                            |                 |
+| 2070     | MA 50                      |                                            |                 |
+| 20A0     | MA 51                      |                                            |                 |
+| 20D0     | MA 52                      |                                            |                 |
+| 2100     | MA 53                      |                                            |                 |
+| 2130     | MA 54                      |                                            |                 |
+| 2160     | MA 55                      |                                            |                 |
+| 2190     | MA 56                      |                                            |                 |
+| 21C0     | MA 57                      |                                            |                 |
+| 21F0     | MA 58                      |                                            |                 |
+| 2220     | MA 59                      |                                            |                 |
+| 2250     | MA 60                      |                                            |                 |
+| 2280     | MA 61                      |                                            |                 |
+| 22B0     | MA 62                      |                                            |                 |
+| 23E0     | MA 63                      |                                            |                 |
+| 2310     | MA 64                      |                                            |                 |
+
+### Playbacks
+
+| Register | Description                | Details                                    |Notes (x=verified)|
+| -------- | -------------------------- | ------------------------------------------ |-----------------|
+| 2340     | AN 1 mute                  | 0=off 1=on                                 |x                |
+| 2341     | AN 1 fx send               | 1/10 fixed point, -65.0dB-0.0dB            |x                |
+| 2342     | AN 1 stereo                | 0=off 1=on                                 |x                |
+| 2343     | AN 1 width                 | 1/100 fixed point, -1.00-1.00              |x                |
+| 2344     | AN 1 ms proc               | 0=off 1=on                                 |x                |
+| 2345     | AN 1 phase invert          | 0=off 1=on                                 |x                |
+| 234A     | AN 2                       |                                            |                 |
+| 2354     | AN 3                       |                                            |                 |
+| 235E     | AN 4                       |                                            |                 |
+| 2368     | AN 5                       |                                            |                 |
+| 2372     | AN 6                       |                                            |                 |
+| 237C     | AN 7                       |                                            |                 |
+| 2386     | AN 8                       |                                            |                 |
+| 2390     | PH 9                       |                                            |                 |
+| 239A     | PH 10                      |                                            |                 |
+| 23A4     | PH 11                      |                                            |                 |
+| 23AE     | PH 12                      |                                            |                 |
+| 23B8     | AES L                      |                                            |                 |
+| 23C2     | AES R                      |                                            |                 |
+| 23CC     | ADAT 1                     |                                            |                 |
+| 23D6     | ADAT 2                     |                                            |                 |
+| 23E0     | ADAT 3                     |                                            |                 |
+| 23EA     | ADAT 4                     |                                            |                 |
+| 23F4     | ADAT 5                     |                                            |                 |
+| 23FE     | ADAT 6                     |                                            |                 |
+| 2408     | ADAT 7                     |                                            |                 |
+| 2412     | ADAT 8                     |                                            |                 |
+| 241C     | ADAT 9                     |                                            |                 |
+| 2426     | ADAT 10                    |                                            |                 |
+
+### Reverb
+
+| Register | Description                | Details                                    |Notes (x=verified)|
+| -------- | -------------------------- | ------------------------------------------ |-----------------|
+| 3000     | reverb enabled             | 0=off 1=on                                 |x                |
+| 3001     | reverb type                | 0=Small Room 1=Medium Room 2=Large Room 3=Walls 4=Shorty 5=Attack 6=Swagger 7=Old School 8=Echoistic 9=8plus9 10=Grand Wide 11=Thicker 12=Envelope 13=Gated 14=Space |x                |
+| 3002     | reverb predelay            | 0-999                                      |x                |
+| 3003     | reverb low cut             | 20Hz-500Hz                                 |x                |
+| 3004     | reverb room scale          | 1/100 fixed point, 0.50-2.00 (type 0-11 only) |x                |
+| 3005     | reverb attack              | 5-400 (envelope only)                      |x                |
+| 3006     | reverb hold                | 5-400 (envelope, gated only)               |x                |
+| 3007     | reverb release             | 5-500 (envelope, gated only)               |x                |
+| 3008     | reverb high cut            | 2000Hz-20000Hz                             |x                |
+| 3009     | reverb time                | 1/10 fixed point 0.1-4.9 (classic only)    |x                |
+| 300A     | reverb high damp           | 2000Hz-20000Hz (classic only)              |x                |
+| 300B     | reverb smooth              | 0-100                                      |x                |
+| 300C     | reverb volume              | 1/10 fixed point, -65.0dB-6.0dB            |x                |
+| 300D     | reverb width               | 1/100 fixed point, 0.00-1.00               |x                |
+
+### Echo
+
+| Register | Description                | Details                                    |Notes (x=verified)|
+| -------- | -------------------------- | ------------------------------------------ |-----------------|
+| 3014     | echo enabled               | 0=off 1=on                                 |x                |
+| 3015     | echo type                  | 0=Stereo Echo 1=Stereo Cross 2=Pong Echo   |x                |
+| 3016     | echo delay time            | 1/100 fixed point, 0.00-2.00               |x                |
+| 3017     | echo feedback              | 0-100                                      |x                |
+| 3018     | echo high cut              | 0=off 1=16k 2=12k 3=8k 4=4k 5=2k           |x                |
+| 3019     | echo volume                | 1/10 fixed point, -65.0dB-6.0dB            |x                |
+| 301A     | echo width                 | 1/100 fixed point, 0.00-1.00               |x                |
+
+### Room EQ
+
+| Register | Description                | Details                                    |
+| -------- | -------------------------- | ------------------------------------------ |
+| 30A0     | AN 1 delay                 | 1/100 fixed point, 0.00ms-42.50ms          |
+| 30A1     | AN 1 room EQ enable        | 0=off 1=on                                 |
+| 30A2     | AN 1 room EQ band 1 type   | 0=Bell 1=Low Shelf 2=High Pass 3=Low Pass  |
+| 30A3     | AN 1 room EQ band 1 gain   | 1/10 fixed point, -20.0dB-20.0dB           |
+| 30A4     | AN 1 room EQ band 1 freq   | 20Hz-20000Hz                               |
+| 30A5     | AN 1 room EQ band 1 q      | 0.4-9.9                                    |
+| 30A6     | AN 1 room EQ band 2 gain   | 1/10 fixed point, -20.0dB-20.0dB           |
+| 30A7     | AN 1 room EQ band 2 freq   | 20Hz-20000Hz                               |
+| 30A8     | AN 1 room EQ band 2 q      | 0.4-9.9                                    |
+| 30A9     | AN 1 room EQ band 3 gain   | 1/10 fixed point, -20.0dB-20.0dB           |
+| 30AA     | AN 1 room EQ band 3 freq   | 20Hz-20000Hz                               |
+| 30AB     | AN 1 room EQ band 3 q      | 0.4-9.9                                    |
+| 30AC     | AN 1 room EQ band 4 gain   | 1/10 fixed point, -20.0dB-20.0dB           |
+| 30AD     | AN 1 room EQ band 4 freq   | 20Hz-20000Hz                               |
+| 30AE     | AN 1 room EQ band 4 q      | 0.4-9.9                                    |
+| 30AF     | AN 1 room EQ band 5 gain   | 1/10 fixed point, -20.0dB-20.0dB           |
+| 30B0     | AN 1 room EQ band 5 freq   | 20Hz-20000Hz                               |
+| 30B1     | AN 1 room EQ band 5 q      | 0.4-9.9                                    |
+| 30B2     | AN 1 room EQ band 6 gain   | 1/10 fixed point, -20.0dB-20.0dB           |
+| 30B3     | AN 1 room EQ band 6 freq   | 20Hz-20000Hz                               |
+| 30B4     | AN 1 room EQ band 6 q      | 0.4-9.9                                    |
+| 30B5     | AN 1 room EQ band 7 gain   | 1/10 fixed point, -20.0dB-20.0dB           |
+| 30B6     | AN 1 room EQ band 7 freq   | 20Hz-20000Hz                               |
+| 30B7     | AN 1 room EQ band 7 q      | 0.4-9.9                                    |
+| 30B8     | AN 1 room EQ band 8 type   | 0=Bell 1=High Shelf 2=Low Pass 3=High Pass |
+| 30B9     | AN 1 room EQ band 8 gain   | 1/10 fixed point, -20.0dB-20.0dB           |
+| 30BA     | AN 1 room EQ band 8 freq   | 20Hz-20000Hz                               |
+| 30BB     | AN 1 room EQ band 8 q      | 0.4-9.9                                    |
+| 30BC     | AN 1 room EQ band 9 type   | 0=Bell 1=High Shelf 2=Low Pass 3=High Pass |
+| 30BD     | AN 1 room EQ band 9 gain   | 1/10 fixed point, -20.0dB-20.0dB           |
+| 30BE     | AN 1 room EQ band 9 freq   | 20Hz-20000Hz                               |
+| 30BF     | AN 1 room EQ band 9 q      | 0.4-9.9                                    |
+| 30C0     | AN 2 room EQ               |                                            |
+| 30E0     | AN 3 room EQ               |                                            |
+| 3100     | AN 4 room EQ               |                                            |
+| 3120     | AN 5 room EQ               |                                            |
+| 3140     | AN 6 room EQ               |                                            |
+| 3160     | AN 7 room EQ               |                                            |
+| 3180     | AN 8 room EQ               |                                            |
+| 31A0     | PH 9 room EQ               |                                            |
+| 31C0     | PH 10 room EQ              |                                            |
+| 31E0     | PH 11 room EQ              |                                            |
+| 3200     | PH 12 room EQ              |                                            |
+| 3220     | AES L room EQ              |                                            |
+| 3240     | AES R room EQ              |                                            |
+| 3260     | ADAT 1 room EQ             |                                            |
+| 3280     | ADAT 2 room EQ             |                                            |
+| 32A0     | ADAT 3 room EQ             |                                            |
+| 32C0     | ADAT 4 room EQ             |                                            |
+| 32E0     | ADAT 5 room EQ             |                                            |
+| 3300     | ADAT 6 room EQ             |                                            |
+| 3320     | ADAT 7 room EQ             |                                            |
+| 3340     | ADAT 8 room EQ             |                                            |
+| 3360     | ADAT 9 room EQ             |                                            |
+| 3380     | ADAT 10 room EQ            |                                            |
+| 33A0     | ADAT 11 room EQ            |                                            |
+| 33C0     | ADAT 12 room EQ            |                                            |
+| 33E0     | ADAT 13 room EQ            |                                            |
+| 3400     | ADAT 14 room EQ            |                                            |
+| 3420     | ADAT 15 room EQ            |                                            |
+| 3440     | ADAT 16 room EQ            |                                            |
+| 3460     | MA 1 room EQ               |                                            |
+| 3480     | MA 2 room EQ               |                                            |
+| 34A0     | MA 3 room EQ               |                                            |
+| 34C0     | MA 4 room EQ               |                                            |
+| 34E0     | MA 5 room EQ               |                                            |
+| 3500     | MA 6 room EQ               |                                            |
+| 3520     | MA 7 room EQ               |                                            |
+| 3540     | MA 8 room EQ               |                                            |
+| 3560     | MA 9 room EQ               |                                            |
+| 3580     | MA 10 room EQ              |                                            |
+| 35A0     | MA 11 room EQ              |                                            |
+| 35C0     | MA 12 room EQ              |                                            |
+| 35E0     | MA 13 room EQ              |                                            |
+| 3600     | MA 14 room EQ              |                                            |
+| 3620     | MA 15 room EQ              |                                            |
+| 3640     | MA 16 room EQ              |                                            |
+| 3660     | MA 17 room EQ              |                                            |
+| 3680     | MA 18 room EQ              |                                            |
+| 36A0     | MA 19 room EQ              |                                            |
+| 36C0     | MA 20 room EQ              |                                            |
+| 36E0     | MA 21 room EQ              |                                            |
+| 3700     | MA 22 room EQ              |                                            |
+| 3720     | MA 23 room EQ              |                                            |
+| 3740     | MA 24 room EQ              |                                            |
+| 3760     | MA 25 room EQ              |                                            |
+| 3780     | MA 26 room EQ              |                                            |
+| 37A0     | MA 27 room EQ              |                                            |
+| 37C0     | MA 28 room EQ              |                                            |
+| 37E0     | MA 29 room EQ              |                                            |
+| 3800     | MA 30 room EQ              |                                            |
+| 3820     | MA 31 room EQ              |                                            |
+| 3840     | MA 32 room EQ              |                                            |
+| 3860     | MA 33 room EQ              |                                            |
+| 3880     | MA 34 room EQ              |                                            |
+| 38A0     | MA 35 room EQ              |                                            |
+| 38C0     | MA 36 room EQ              |                                            |
+| 38E0     | MA 37 room EQ              |                                            |
+| 3900     | MA 38 room EQ              |                                            |
+| 3920     | MA 39 room EQ              |                                            |
+| 3940     | MA 40 room EQ              |                                            |
+| 3960     | MA 41 room EQ              |                                            |
+| 3980     | MA 42 room EQ              |                                            |
+| 39A0     | MA 43 room EQ              |                                            |
+| 39C0     | MA 44 room EQ              |                                            |
+| 39E0     | MA 45 room EQ              |                                            |
+| 3A00     | MA 46 room EQ              |                                            |
+| 3A20     | MA 47 room EQ              |                                            |
+| 3A40     | MA 48 room EQ              |                                            |
+| 3A60     | MA 49 room EQ              |                                            |
+| 3A80     | MA 50 room EQ              |                                            |
+| 3AA0     | MA 51 room EQ              |                                            |
+| 3AC0     | MA 52 room EQ              |                                            |
+| 3AE0     | MA 53 room EQ              |                                            |
+| 3B00     | MA 54 room EQ              |                                            |
+| 3B20     | MA 55 room EQ              |                                            |
+| 3B40     | MA 56 room EQ              |                                            |
+| 3B60     | MA 57 room EQ              |                                            |
+| 3B80     | MA 58 room EQ              |                                            |
+| 3BA0     | MA 59 room EQ              |                                            |
+| 3BC0     | MA 60 room EQ              |                                            |
+| 3BE0     | MA 61 room EQ              |                                            |
+| 3C00     | MA 62 room EQ              |                                            |
+| 3C20     | MA 63 room EQ              |                                            |
+| 3C40     | MA 64 room EQ              |                                            |
+
+### Control Room
+
+| Register | Description                | Details                                    |Notes (x=verified)|
+| -------- | -------------------------- | ------------------------------------------ |-----------------|
+| 3050     | main out                   | 0=off 1=AN 1/2 2=AN 3/4 ... 46=MA 63/64    |x                |
+| 3051     | mute mono                  | 0=off 1=on                                 |x                |
+| 3052     | mute enable                | 0=off 1=on                                 |x                |
+| 3053     | main out dim               | 1/10 fixed point, -65.0dB-0.0dB            |x                |
+| 3054     | dim                        | 0=off 1=on                                 |x                |
+| 3055     | recall volume              | 1/10 fixed point, -65.0dB-0.0dB            |x                |
+
+### Clock
+
+| Register | Description                | Details                                    |Notes (x=verified)|
+| -------- | -------------------------- | ------------------------------------------ |-----------------|
+| 3064     | clock source               | 0=Internal 1=Word Clock 2=AES 3=ADAT 1 4=ADAT 2 5=MADI O 6=MADI C |x                |
+| 3065     | sample rate                | 0=32000 1=44100 2=48000 3=64000 4=88200 5=96000 6=128000 7=176400 8=192000 |x                |
+| 3066     | word clock single speed    | 0=off 1=on                                 |x                |
+| 3067     | word clock term            | 0=off 1=on                                 |x                |
+
+### Hardware
+
+| Register | Description                | Details                                    |Notes (x=verified)|
+| -------- | -------------------------- | ------------------------------------------ |-----------------|
+| 3078     | AES input                  | 0=XLR 1=Optical 2                          |x                |
+| 307A     | AES channel status         | 0=Consumer 1=Professional                  |x                |
+| 307D?    | standalone MIDI            | 0=off 1=MIDI 1 2=MIDI 2                    |x                |
+| 307E?    | standalone ARC             | 0=volume 1=1s op 2=normal                  |x                |
+| 307F?    | LCD contrast               |                                            |x                |
+| 3087     | optical out 1              | 0=ADAT 1=SPDIF                             |x                |
+| 3088     | optical out 2              | 0=ADAT 1=SPDIF 2=AES                       |x                |
+| 308C     | MADI input                 | 0=Optical 1=Coaxial 2=Auto 3=Split         |x                |
+| 308D     | MADI output                | 0=Optical 1=Mirror 2=Split                 |x                |
+| 308E     | MADI frames                | 0=96k 1=48k                                |x                |
+| 308F     | MADI format                | 0=64 channels 1=56 channels                |x                |
+| 3200     | DSP version/load           | [0:7]=DSP load [8:15]=DSP version          |x                |
+| 3201     | DSP function available     |                                            |x                |
+| 3202     | DSP function overload      | [8:15]=channel                             |x                |
+| 3203     | ARC encoder delta          |                                            |x                |
+| 3D43?    | standalone MIDI            |                                            |x                |
+| 3D44?    | CC-mode                    | 0=off 1=on                                 |x                |
+| 3D45?    | standalone ARC             |                                            |x                |
+
+### State
+
+| Register | Description                | Details                                    |Notes (x=verified)|
+| -------- | -------------------------- | ------------------------------------------ |-----------------|
+| 3E00     | cue                        | FFFF=no cue, [0:7]=cue to [8:15]=cue from  |x                |
+| 3E02     | ARC USB LEDs               |                                            |x                |
+| **3E03** | **dump registers**         | **234A**                                   |x|
+| **3E04** | **dump registers**         | **67CD** (seems to trigger channel regs?)          |x|
+| 3E06     | store state                | 0910=slot 1 0911=slot 2 0912=slot 3 0913=slot 4 0914=slot 5 0915=slot 6 |x                |
+| 3E07     | ?                          | set to 3 by totalmix on startup            |x                |
+| 3E08     | time                       | [0:7]=minute [8:15]=hour                   |x                |
+| 3E09     | date                       | [0:4]=day [5:8]=month [9:13]=year - 2000   |x                |
+
+
+
+### DUREC [W]
+
+| Register | Description       | Details                                                                                                                                  |
+|----------|-------------------|------------------------------------------------------------------------------------------------------------------------------------------|
+| 3E9A     | Play Control       | 0x8120=STOP RECORD, 0x8121=STOP, 0x8122=RECORD, 0x8123=PLAY/PAUSE                                                                       |
+| 3E9B     | Delete             | INT, INDEX WITH HIGH BIT SET                                                                                                            |
+| 3E9C     | Track Select       | INT                                                                                                                                      |
+| 3E9D     | Seek               | INT, SECONDS                                                                                                                            |
+| 3E9E     | Track Next/Prev    | 0=PREVIOUS, 1=NEXT                                                                                                                      |
+| 3E9F     | Next Track         | 0xFFFF=STOP, 0x8000=TRACK 1, 0x8001=TRACK 2, ...                                                                                        |
+| 3EA0     | Play Mode          | 0x8000=SINGLE, 0x8001=UFX SINGLE, 0x8002=CONTINUOUS, 0x8003=SINGLE NEXT, 0x8004=REPEAT SINGLE, 0x8005=REPEAT ALL                        |
+
+### DUREC STATUS [R]
+
+| Register | Description              | Details                                                                                                                                         |
+|----------|--------------------------|-------------------------------------------------------------------------------------------------------------------------------------------------|
+| 3580     | System State             | [0:3] 0=NO MEDIA, 2=INITIALIZING, 3=DELETING?, 5=STOPPED, 6=RECORDING, A=PLAYING  <br> [4:7] ?  <br> [8:15] PROGRESS BAR, 00=0%, 41=100%         |
+| 3581     | Playback/Record Position | —                                                                                                                                               |
+| 3582     | Unknown                  | —                                                                                                                                               |
+| 3583     | USB Load/Errors          | [0:7] ERRORS  <br> [8:15] LOAD %                                                                                                                |
+| 3584     | Total Space              | GB * 16                                                                                                                                         |
+| 3585     | Free Space               | GB * 16                                                                                                                                         |
+| 3586     | Total Tracks             | —                                                                                                                                               |
+| 3587     | Selected Track           | —                                                                                                                                               |
+| 3588     | Next Track / Play Mode   | [0:11] NEXT TRACK (FFF=NONE)  <br> [12:15] PLAY MODE: 0=SINGLE, 1=UFX SINGLE, 2=CONTINUOUS, 3=SINGLE NEXT, 4=REPEAT SINGLE, 5=REPEAT ALL         |
+| 3589     | Remaining Record Time    | —                                                                                                                                               |
+| 358A     | Track Info               | 0xFFFF=NAME OF LAST PLAYED TRACK AND PENDING RECORD TRACKS / SAMPLE RATE                                                                       |
+| 358B     | Filename [0:1]           | —                                                                                                                                               |
+| 358C     | Filename [2:3]           | —                                                                                                                                               |
+| 358D     | Filename [4:5]           | —                                                                                                                                               |
+| 358E     | Filename [6:7]           | —                                                                                                                                               |
+| 358F     | Sample Rate / Channels   | [0:7]=SAMPLE RATE ENUM, [8:15]=CHANNELS                                                                                                         |
+| 3590     | Track Length             | —                                                                                                                                               |
+
+---
+
+### Mixer
+
+| Register | Description                | Details                                    |
+| -------- | -------------------------- | ------------------------------------------ |
+| 4000     | IN AN 1 → AN 1/2           | see [Mixer value format](#mixer-value-format) |
+| 4001     | IN AN 1 → AN 3/4           |                                            |
+| 4002     | IN AN 1 → AN 5/6           |                                            |
+| 4003     | IN AN 1 → AN 7/8           |                                            |
+| 4004     | IN AN 1 → PH 9/10          |                                            |
+| 4005     | IN AN 1 → PH 11/12         |                                            |
+| 4006     | IN AN 1 → AES L/R          |                                            |
+| 4007     | IN AN 1 → ADAT 1/2         |                                            |
+| 4008     | IN AN 1 → ADAT 3/4         |                                            |
+| 4009     | IN AN 1 → ADAT 5/6         |                                            |
+| 400A     | IN AN 1 → ADAT 7/8         |                                            |
+| 400B     | IN AN 1 → ADAT 9/10        |                                            |
+| 400C     | IN AN 1 → ADAT 11/12       |                                            |
+| 400D     | IN AN 1 → ADAT 13/14       |                                            |
+| 400E     | IN AN 1 → ADAT 15/16       |                                            |
+| 400F     | IN AN 1 → MA 1/2           |                                            |
+| 4010     | IN AN 1 → MA 3/4           |                                            |
+| 4011     | IN AN 1 → MA 5/6           |                                            |
+| 4012     | IN AN 1 → MA 7/8           |                                            |
+| 4013     | IN AN 1 → MA 9/10          |                                            |
+| 4014     | IN AN 1 → MA 11/12         |                                            |
+| 4015     | IN AN 1 → MA 13/14         |                                            |
+| 4016     | IN AN 1 → MA 15/16         |                                            |
+| 4017     | IN AN 1 → MA 17/18         |                                            |
+| 4018     | IN AN 1 → MA 19/20         |                                            |
+| 4019     | IN AN 1 → MA 21/22         |                                            |
+| 401A     | IN AN 1 → MA 23/24         |                                            |
+| 401B     | IN AN 1 → MA 25/26         |                                            |
+| 401C     | IN AN 1 → MA 27/28         |                                            |
+| 401D     | IN AN 1 → MA 29/30         |                                            |
+| 401E     | IN AN 1 → MA 31/32         |                                            |
+| 401F     | IN AN 1 → MA 33/34         |                                            |
+| 4020     | IN AN 1 → MA 35/36         |                                            |
+| 4021     | IN AN 1 → MA 37/38         |                                            |
+| 4022     | IN AN 1 → MA 39/40         |                                            |
+| 4023     | IN AN 1 → MA 41/42         |                                            |
+| 4024     | IN AN 1 → MA 43/44         |                                            |
+| 4025     | IN AN 1 → MA 45/46         |                                            |
+| 4026     | IN AN 1 → MA 47/48         |                                            |
+| 4027     | IN AN 1 → MA 49/50         |                                            |
+| 4028     | IN AN 1 → MA 51/52         |                                            |
+| 4029     | IN AN 1 → MA 53/54         |                                            |
+| 402A     | IN AN 1 → MA 55/56         |                                            |
+| 402B     | IN AN 1 → MA 57/58         |                                            |
+| 402C     | IN AN 1 → MA 59/60         |                                            |
+| 402D     | IN AN 1 → MA 61/62         |                                            |
+| 402E     | IN AN 1 → MA 63/64         |                                            |
+| 4040     | IN AN 2 → AN 1/2           |                                            |
+| 4080     | IN AN 3 → AN 1/2           |                                            |
+| 40C0     | IN AN 4 → AN 1/2           |                                            |
+| 4100     | IN AN 5 → AN 1/2           |                                            |
+| 4140     | IN AN 6 → AN 1/2           |                                            |
+| 4180     | IN AN 7 → AN 1/2           |                                            |
+| 41C0     | IN AN 8 → AN 1/2           |                                            |
+| 4200     | IN Mic 9 → AN 1/2          |                                            |
+| 4240     | IN Mic 10 → AN 1/2         |                                            |
+| 4280     | IN Mic 11 → AN 1/2         |                                            |
+| 42C0     | IN Mic 12 → AN 1/2         |                                            |
+| 4300     | IN AES L → AN 1/2          |                                            |
+| 4340     | IN AES R → AN 1/2          |                                            |
+| 4380     | IN ADAT 1 → AN 1/2         |                                            |
+| 43C0     | IN ADAT 2 → AN 1/2         |                                            |
+| 4400     | IN ADAT 3 → AN 1/2         |                                            |
+| 4440     | IN ADAT 4 → AN 1/2         |                                            |
+| 4480     | IN ADAT 5 → AN 1/2         |                                            |
+| 44C0     | IN ADAT 6 → AN 1/2         |                                            |
+| 4500     | IN ADAT 7 → AN 1/2         |                                            |
+| 4540     | IN ADAT 8 → AN 1/2         |                                            |
+| 4580     | IN ADAT 9 → AN 1/2         |                                            |
+| 45C0     | IN ADAT 10 → AN 1/2        |                                            |
+| 4600     | IN ADAT 11 → AN 1/2        |                                            |
+| 4640     | IN ADAT 12 → AN 1/2        |                                            |
+| 4680     | IN ADAT 13 → AN 1/2        |                                            |
+| 46C0     | IN ADAT 14 → AN 1/2        |                                            |
+| 4700     | IN ADAT 15 → AN 1/2        |                                            |
+| 4740     | IN ADAT 16 → AN 1/2        |                                            |
+| 4780     | IN MA 1 → AN 1/2           |                                            |
+| 47C0     | IN MA 2 → AN 1/2           |                                            |
+| 4800     | IN MA 3 → AN 1/2           |                                            |
+| 4840     | IN MA 4 → AN 1/2           |                                            |
+| 4880     | IN MA 5 → AN 1/2           |                                            |
+| 48C0     | IN MA 6 → AN 1/2           |                                            |
+| 4900     | IN MA 7 → AN 1/2           |                                            |
+| 4940     | IN MA 8 → AN 1/2           |                                            |
+| 4980     | IN MA 9 → AN 1/2           |                                            |
+| 49C0     | IN MA 10 → AN 1/2          |                                            |
+| 4A00     | IN MA 11 → AN 1/2          |                                            |
+| 4A40     | IN MA 12 → AN 1/2          |                                            |
+| 4A80     | IN MA 13 → AN 1/2          |                                            |
+| 4AC0     | IN MA 14 → AN 1/2          |                                            |
+| 4B00     | IN MA 15 → AN 1/2          |                                            |
+| 4B40     | IN MA 16 → AN 1/2          |                                            |
+| 4B80     | IN MA 17 → AN 1/2          |                                            |
+| 4BC0     | IN MA 18 → AN 1/2          |                                            |
+| 4C00     | IN MA 19 → AN 1/2          |                                            |
+| 4C40     | IN MA 20 → AN 1/2          |                                            |
+| 4C80     | IN MA 21 → AN 1/2          |                                            |
+| 4CC0     | IN MA 22 → AN 1/2          |                                            |
+| 4D00     | IN MA 23 → AN 1/2          |                                            |
+| 4D40     | IN MA 24 → AN 1/2          |                                            |
+| 4D80     | IN MA 25 → AN 1/2          |                                            |
+| 4DC0     | IN MA 26 → AN 1/2          |                                            |
+| 4E00     | IN MA 27 → AN 1/2          |                                            |
+| 4E40     | IN MA 28 → AN 1/2          |                                            |
+| 4E80     | IN MA 29 → AN 1/2          |                                            |
+| 4EC0     | IN MA 30 → AN 1/2          |                                            |
+| 4F00     | IN MA 31 → AN 1/2          |                                            |
+| 4F40     | IN MA 32 → AN 1/2          |                                            |
+| 4F80     | IN MA 33 → AN 1/2          |                                            |
+| 4FC0     | IN MA 34 → AN 1/2          |                                            |
+| 5000     | IN MA 35 → AN 1/2          |                                            |
+| 5040     | IN MA 36 → AN 1/2          |                                            |
+| 5080     | IN MA 37 → AN 1/2          |                                            |
+| 50C0     | IN MA 38 → AN 1/2          |                                            |
+| 5100     | IN MA 39 → AN 1/2          |                                            |
+| 5140     | IN MA 40 → AN 1/2          |                                            |
+| 5180     | IN MA 41 → AN 1/2          |                                            |
+| 51C0     | IN MA 42 → AN 1/2          |                                            |
+| 5200     | IN MA 43 → AN 1/2          |                                            |
+| 5240     | IN MA 44 → AN 1/2          |                                            |
+| 5280     | IN MA 45 → AN 1/2          |                                            |
+| 52C0     | IN MA 46 → AN 1/2          |                                            |
+| 5300     | IN MA 47 → AN 1/2          |                                            |
+| 5340     | IN MA 48 → AN 1/2          |                                            |
+| 5380     | IN MA 49 → AN 1/2          |                                            |
+| 53C0     | IN MA 50 → AN 1/2          |                                            |
+| 5400     | IN MA 51 → AN 1/2          |                                            |
+| 5440     | IN MA 52 → AN 1/2          |                                            |
+| 5480     | IN MA 53 → AN 1/2          |                                            |
+| 54C0     | IN MA 54 → AN 1/2          |                                            |
+| 5500     | IN MA 55 → AN 1/2          |                                            |
+| 5540     | IN MA 56 → AN 1/2          |                                            |
+| 5580     | IN MA 57 → AN 1/2          |                                            |
+| 55C0     | IN MA 58 → AN 1/2          |                                            |
+| 5600     | IN MA 59 → AN 1/2          |                                            |
+| 5640     | IN MA 60 → AN 1/2          |                                            |
+| 5680     | IN MA 61 → AN 1/2          |                                            |
+| 56C0     | IN MA 62 → AN 1/2          |                                            |
+| 5700     | IN MA 63 → AN 1/2          |                                            |
+| 5740     | IN MA 64 → AN 1/2          |                                            |
+| 5780     | PB AN 1 → AN 1/2           |                                            |
+| 57C0     | PB AN 2 → AN 1/2           |                                            |
+| 5800     | PB AN 3 → AN 1/2           |                                            |
+| 5840     | PB AN 4 → AN 1/2           |                                            |
+| 5880     | PB AN 5 → AN 1/2           |                                            |
+| 58C0     | PB AN 6 → AN 1/2           |                                            |
+| 5900     | PB AN 7 → AN 1/2           |                                            |
+| 5940     | PB AN 8 → AN 1/2           |                                            |
+| 5980     | PB Mic 9 → AN 1/2          |                                            |
+| 59C0     | PB Mic 10 → AN 1/2         |                                            |
+| 5A00     | PB Mic 11 → AN 1/2         |                                            |
+| 5A40     | PB Mic 12 → AN 1/2         |                                            |
+| 5A80     | PB AES L → AN 1/2          |                                            |
+| 5AC0     | PB AES R → AN 1/2          |                                            |
+| 5B00     | PB ADAT 1 → AN 1/2         |                                            |
+| 5B40     | PB ADAT 2 → AN 1/2         |                                            |
+| 5B80     | PB ADAT 3 → AN 1/2         |                                            |
+| 5BC0     | PB ADAT 4 → AN 1/2         |                                            |
+| 5C00     | PB ADAT 5 → AN 1/2         |                                            |
+| 5C40     | PB ADAT 6 → AN 1/2         |                                            |
+| 5C80     | PB ADAT 7 → AN 1/2         |                                            |
+| 5CC0     | PB ADAT 8 → AN 1/2         |                                            |
+| 5D00     | PB ADAT 9 → AN 1/2         |                                            |
+| 5D40     | PB ADAT 10 → AN 1/2        |                                            |
+
+#### Mixer value format
+
+	[0-13]	vol: 1/10 fixed point, -300.0 for -inf; pan: -100-100
+	[14]	0=vol 1=pan
+	[15]	channel 2
