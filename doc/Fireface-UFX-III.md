@@ -488,101 +488,85 @@
 | 34E6     | AN 7 delay                 | 1/100 fixed point, 0.00ms–42.50ms          |
 | 34E7     | AN 7 room EQ enable        | 0=off 1=on                                 |
 |...	  | ...                        | ...                                        |
-
-
-
-| 30E0     | AN 3 room EQ               |                                            |
-| 3100     | AN 4 room EQ               |                                            |
-| 3120     | AN 5 room EQ               |                                            |
-| 3140     | AN 6 room EQ               |                                            |
-| 3160     | AN 7 room EQ               |                                            |
-| 3180     | AN 8 room EQ               |                                            |
-| 31A0     | PH 9 room EQ               |                                            |
-| 31C0     | PH 10 room EQ              |                                            |
-| 31E0     | PH 11 room EQ              |                                            |
-| 3200     | PH 12 room EQ              |                                            |
-| 3220     | AES L room EQ              |                                            |
-| 3240     | AES R room EQ              |                                            |
-| 3260     | ADAT 1 room EQ             |                                            |
-| 3280     | ADAT 2 room EQ             |                                            |
-| 32A0     | ADAT 3 room EQ             |                                            |
-| 32C0     | ADAT 4 room EQ             |                                            |
-| 32E0     | ADAT 5 room EQ             |                                            |
-| 3300     | ADAT 6 room EQ             |                                            |
-| 3320     | ADAT 7 room EQ             |                                            |
-| 3340     | ADAT 8 room EQ             |                                            |
-| 3360     | ADAT 9 room EQ             |                                            |
-| 3380     | ADAT 10 room EQ            |                                            |
-| 33A0     | ADAT 11 room EQ            |                                            |
-| 33C0     | ADAT 12 room EQ            |                                            |
-| 33E0     | ADAT 13 room EQ            |                                            |
-| 3400     | ADAT 14 room EQ            |                                            |
-| 3420     | ADAT 15 room EQ            |                                            |
-| 3440     | ADAT 16 room EQ            |                                            |
-| 3460     | MA 1 room EQ               |                                            |
-| 3480     | MA 2 room EQ               |                                            |
-| 34A0     | MA 3 room EQ               |                                            |
-| 34C0     | MA 4 room EQ               |                                            |
-| 34E0     | MA 5 room EQ               |                                            |
-| 3500     | MA 6 room EQ               |                                            |
-| 3520     | MA 7 room EQ               |                                            |
-| 3540     | MA 8 room EQ               |                                            |
-| 3560     | MA 9 room EQ               |                                            |
-| 3580     | MA 10 room EQ              |                                            |
-| 35A0     | MA 11 room EQ              |                                            |
-| 35C0     | MA 12 room EQ              |                                            |
-| 35E0     | MA 13 room EQ              |                                            |
-| 3600     | MA 14 room EQ              |                                            |
-| 3620     | MA 15 room EQ              |                                            |
-| 3640     | MA 16 room EQ              |                                            |
-| 3660     | MA 17 room EQ              |                                            |
-| 3680     | MA 18 room EQ              |                                            |
-| 36A0     | MA 19 room EQ              |                                            |
-| 36C0     | MA 20 room EQ              |                                            |
-| 36E0     | MA 21 room EQ              |                                            |
-| 3700     | MA 22 room EQ              |                                            |
-| 3720     | MA 23 room EQ              |                                            |
-| 3740     | MA 24 room EQ              |                                            |
-| 3760     | MA 25 room EQ              |                                            |
-| 3780     | MA 26 room EQ              |                                            |
-| 37A0     | MA 27 room EQ              |                                            |
-| 37C0     | MA 28 room EQ              |                                            |
-| 37E0     | MA 29 room EQ              |                                            |
-| 3800     | MA 30 room EQ              |                                            |
-| 3820     | MA 31 room EQ              |                                            |
-| 3840     | MA 32 room EQ              |                                            |
-| 3860     | MA 33 room EQ              |                                            |
-| 3880     | MA 34 room EQ              |                                            |
-| 38A0     | MA 35 room EQ              |                                            |
-| 38C0     | MA 36 room EQ              |                                            |
-| 38E0     | MA 37 room EQ              |                                            |
-| 3900     | MA 38 room EQ              |                                            |
-| 3920     | MA 39 room EQ              |                                            |
-| 3940     | MA 40 room EQ              |                                            |
-| 3960     | MA 41 room EQ              |                                            |
-| 3980     | MA 42 room EQ              |                                            |
-| 39A0     | MA 43 room EQ              |                                            |
-| 39C0     | MA 44 room EQ              |                                            |
-| 39E0     | MA 45 room EQ              |                                            |
-| 3A00     | MA 46 room EQ              |                                            |
-| 3A20     | MA 47 room EQ              |                                            |
-| 3A40     | MA 48 room EQ              |                                            |
-| 3A60     | MA 49 room EQ              |                                            |
-| 3A80     | MA 50 room EQ              |                                            |
-| 3AA0     | MA 51 room EQ              |                                            |
-| 3AC0     | MA 52 room EQ              |                                            |
-| 3AE0     | MA 53 room EQ              |                                            |
-| 3B00     | MA 54 room EQ              |                                            |
-| 3B20     | MA 55 room EQ              |                                            |
-| 3B40     | MA 56 room EQ              |                                            |
-| 3B60     | MA 57 room EQ              |                                            |
-| 3B80     | MA 58 room EQ              |                                            |
-| 3BA0     | MA 59 room EQ              |                                            |
-| 3BC0     | MA 60 room EQ              |                                            |
-| 3BE0     | MA 61 room EQ              |                                            |
-| 3C00     | MA 62 room EQ              |                                            |
-| 3C20     | MA 63 room EQ              |                                            |
-| 3C40     | MA 64 room EQ              |                                            |
+| 3506     | AN 8 delay                 | 1/100 fixed point, 0.00ms–42.50ms          |
+| 3507     | AN 8 room EQ enable        | 0=off 1=on                                 |
+| ...      | ...                        | ...                                        |
+| 3526     | PH 9 delay                 | 1/100 fixed point, 0.00ms–42.50ms          |
+| 3527     | PH 9 room EQ enable        | 0=off 1=on                                 |
+| ...      | ...                        | ...                                        |
+| 3546     | PH 10 delay                | 1/100 fixed point, 0.00ms–42.50ms          |
+| 3547     | PH 10 room EQ enable       | 0=off 1=on                                 |
+| ...      | ...                        | ...                                        |
+| 3566     | PH 11 delay                | 1/100 fixed point, 0.00ms–42.50ms          |
+| 3567     | PH 11 room EQ enable       | 0=off 1=on                                 |
+| ...      | ...                        | ...                                        |
+| 3586     | PH 12 delay                | 1/100 fixed point, 0.00ms–42.50ms          |
+| 3587     | PH 12 room EQ enable       | 0=off 1=on                                 |
+| ...      | ...                        | ...                                        |
+| 35A6     | AES L delay                | 1/100 fixed point, 0.00ms–42.50ms          |
+| 35A7     | AES L room EQ enable       | 0=off 1=on                                 |
+| ...      | ...                        | ...                                        |
+| 35C6     | AES R delay                | 1/100 fixed point, 0.00ms–42.50ms          |
+| 35C7     | AES R room EQ enable       | 0=off 1=on                                 |
+| ...      | ...                        | ...                                        |
+| 35E6     | ADAT 1 delay               | 1/100 fixed point, 0.00ms–42.50ms          |
+| 35E7     | ADAT 1 room EQ enable      | 0=off 1=on                                 |
+| ...      | ...                        | ...                                        |
+| 3606     | ADAT 2 delay               | 1/100 fixed point, 0.00ms–42.50ms          |
+| 3607     | ADAT 2 room EQ enable      | 0=off 1=on                                 |
+| ...      | ...                        | ...                                        |
+| 3626     | ADAT 3 delay               | 1/100 fixed point, 0.00ms–42.50ms          |
+| 3627     | ADAT 3 room EQ enable      | 0=off 1=on                                 |
+| ...      | ...                        | ...                                        |
+| 3646     | ADAT 4 delay               | 1/100 fixed point, 0.00ms–42.50ms          |
+| 3647     | ADAT 4 room EQ enable      | 0=off 1=on                                 |
+| ...      | ...                        | ...                                        |
+| 3666     | ADAT 5 delay               | 1/100 fixed point, 0.00ms–42.50ms          |
+| 3667     | ADAT 5 room EQ enable      | 0=off 1=on                                 |
+| ...      | ...                        | ...                                        |
+| 3686     | ADAT 6 delay               | 1/100 fixed point, 0.00ms–42.50ms          |
+| 3687     | ADAT 6 room EQ enable      | 0=off 1=on                                 |
+| ...      | ...                        | ...                                        |
+| 36A6     | ADAT 7 delay               | 1/100 fixed point, 0.00ms–42.50ms          |
+| 36A7     | ADAT 7 room EQ enable      | 0=off 1=on                                 |
+| ...      | ...                        | ...                                        |
+| 36C6     | ADAT 8 delay               | 1/100 fixed point, 0.00ms–42.50ms          |
+| 36C7     | ADAT 8 room EQ enable      | 0=off 1=on                                 |
+| ...      | ...                        | ...                                        |
+| 36E6     | ADAT 9 delay               | 1/100 fixed point, 0.00ms–42.50ms          |
+| 36E7     | ADAT 9 room EQ enable      | 0=off 1=on                                 |
+| ...      | ...                        | ...                                        |
+| 3706     | ADAT 10 delay              | 1/100 fixed point, 0.00ms–42.50ms          |
+| 3707     | ADAT 10 room EQ enable     | 0=off 1=on                                 |
+| ...      | ...                        | ...                                        |
+| 3726     | ADAT 11 delay              | 1/100 fixed point, 0.00ms–42.50ms          |
+| 3727     | ADAT 11 room EQ enable     | 0=off 1=on                                 |
+| ...      | ...                        | ...                                        |
+| 3746     | ADAT 12 delay              | 1/100 fixed point, 0.00ms–42.50ms          |
+| 3747     | ADAT 12 room EQ enable     | 0=off 1=on                                 |
+| ...      | ...                        | ...                                        |
+| 3766     | ADAT 13 delay              | 1/100 fixed point, 0.00ms–42.50ms          |
+| 3767     | ADAT 13 room EQ enable     | 0=off 1=on                                 |
+| ...      | ...                        | ...                                        |
+| 3786     | ADAT 14 delay              | 1/100 fixed point, 0.00ms–42.50ms          |
+| 3787     | ADAT 14 room EQ enable     | 0=off 1=on                                 |
+| ...      | ...                        | ...                                        |
+| 37A6     | ADAT 15 delay              | 1/100 fixed point, 0.00ms–42.50ms          |
+| 37A7     | ADAT 15 room EQ enable     | 0=off 1=on                                 |
+| ...      | ...                        | ...                                        |
+| 37C6     | ADAT 16 delay              | 1/100 fixed point, 0.00ms–42.50ms          |
+| 37C7     | ADAT 16 room EQ enable     | 0=off 1=on                                 |
+| ...      | ...                        | ...                                        |
+| 37E6     | MA 1 delay                 | 1/100 fixed point, 0.00ms–42.50ms          |
+| 37E7     | MA 1 room EQ enable        | 0=off 1=on                                 |
+| ...      | ...                        | ...                                        |
+| 3806     | MA 2 delay                 | 1/100 fixed point, 0.00ms–42.50ms          |
+| 3807     | MA 2 room EQ enable        | 0=off 1=on                                 |
+| ...      | ...                        | ...                                        |
+| ...      | ... (MA 3 ... MA 63)       | ...                                        |
+| 3FC6     | MA 64 delay                | 1/100 fixed point, 0.00ms–42.50ms          |
+| 3FC7     | MA 64 room EQ enable       | 0=off 1=on                                 |
+| ...      | ...                        | ...                                        |
 
 ### Control Room
 
