@@ -326,6 +326,7 @@ ctltoreg(enum control ctl, const struct param *p)
 	case OUTPUT_REFLEVEL:         reg = 0x09; goto channel;
 	case OUTPUT_CROSSFEED:        reg = 0x0A; goto channel;
 	case OUTPUT_VOLUMECAL:        reg = 0x0B; goto channel;
+	
 	case LOWCUT:                  reg = 0x0C; goto channel;
 	case LOWCUT_FREQ:             reg = 0x0D; goto channel;
 	case LOWCUT_SLOPE:            reg = 0x0E; goto channel;

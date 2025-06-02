@@ -61,7 +61,6 @@ static const struct channelinfo inputs[] = {
     {"MADI 41"}, {"MADI 42"}, {"MADI 43"}, {"MADI 44"}, {"MADI 45"}, {"MADI 46"}, {"MADI 47"}, {"MADI 48"},
     {"MADI 49"}, {"MADI 50"}, {"MADI 51"}, {"MADI 52"}, {"MADI 53"}, {"MADI 54"}, {"MADI 55"}, {"MADI 56"},
     {"MADI 57"}, {"MADI 58"}, {"MADI 59"}, {"MADI 60"}, {"MADI 61"}, {"MADI 62"}, {"MADI 63"}, {"MADI 64"}
-    // How does Spdif fit in... start of adat2?
 };
 _Static_assert(LEN(inputs) == 94, "bad inputs");
 
@@ -214,14 +213,14 @@ regtoctl(int reg, struct param *p)
             case 0x3: return PLAYBACK_WIDTH;
             case 0x4: return PLAYBACK_MSPROC;
             case 0x5: return PLAYBACK_PHASE;
-
+			 */
 
 			case 0x0: return MIX;
 			case 0x1: return MIX;
 			case 0x2: return MIX;
 			case 0x3: return MIX;
 			case 0x4: return MIX;
-			case 0x5: return MIX;   */
+			case 0x5: return MIX;
             default: return UNKNOWN;
         }
     } else if (reg < 0x4000) {
@@ -271,9 +270,6 @@ regtoctl(int reg, struct param *p)
             case 0x3202: return HARDWARE_DSPSTATUS;
             case 0x3203: return HARDWARE_ARCDELTA;
 
-
-
-
 			// Durec status [r]
 			case 0x3580: return DUREC_STATUS;
 			case 0x3581: return DUREC_TIME;
@@ -294,7 +290,8 @@ regtoctl(int reg, struct param *p)
 			case 0x3590: return DUREC_LENGTH;
 
 			// TODO: This is a guess, need to be confirmed
-			case 0x33FD: return REFRESH; // Indicator for refresh done
+			//case 0x33FD: return REFRESH; // Indicator for refresh done
+			case 0x33FD: return UNKNOWN;
 
         }
         if (reg >= ROOM_EQ_BASE) {
@@ -336,18 +333,13 @@ regtoctl(int reg, struct param *p)
                 case 0x1F: return ROOMEQ_BAND9Q;
             }
         }
-    } else if (reg > 0x4000 && reg < 0x4000 + MIX_REGION_SIZE) {
+    } else if (reg >= 0x4000 && reg < 0x4000 + MIX_REGION_SIZE) {
         p->out = reg >> 6 & 0x3F;
         p->in = reg & 0x3F;
         if (p->out >= LEN(outputs) || p->in >= LEN(inputs))
             return -1;
         return MIX;
     }
-    // Not in the wiki so don't know the values:
-    //  - AUTOLEVEL_METER
-    //  - DYNAMICS_METER
-    //  - REFRESH
-    //  - DUREC_*
 	return -1;
 }
 
@@ -355,7 +347,7 @@ regtoctl(int reg, struct param *p)
 
 static int ctltoreg(enum control ctl, const struct param *p)
 {
-	int reg, idx, flags;
+	int reg, idx = 0, flags = 0;
 	if ((unsigned)p->in < LEN(inputs)) {
 		flags = inputs[p->in].flags;
 		idx = p->in;
@@ -434,61 +426,17 @@ static int ctltoreg(enum control ctl, const struct param *p)
 		//TODO: Recheck this, seems to be wrong. Just kinda lost here...
 		case MIX:
 			if ((unsigned)p->out >= LEN(outputs)) break;
-			if ((unsigned)p->in >= LEN(inputs)) break;
-			// MIX address space: base 0x2340 + (out * 0x30) + in
-			return 0x2340 | (p->out * 0x30) | p->in;
+			if ((unsigned)p->in >= LEN(inputs) + LEN(outputs)) break;
+			return 0x2340 + (p->out * 0x30) + p->in;
 
-			//return 0x2340 + p->out * 0x30 + p->in; // 0x30 pro Out, MIX beginnt bei 0x2340
-			//wrong!  return 0x2340 | (p->out << 6) | p->in; // 0x2340 is the base for MIX region
+		case MIX_LEVEL:
+			if ((unsigned)p->out >= LEN(outputs)) break;
+			if ((unsigned)p->in >= LEN(inputs) + LEN(outputs)) break;
 
-		case MIX_LEVEL:               if ((unsigned)p->out >= LEN(outputs)) break;
-			                          if ((unsigned)p->in >= LEN(inputs) + LEN(outputs)) break;
-			                          idx = p->in;
-			                          if (idx >= LEN(inputs)) idx += 0x30 - LEN(inputs);
-										return 0x4000 | (p->out * 0x30) | idx;
-								      //return 0x4000 | p->out << 6 | idx;
+			// Optional: Offset für Playbacks im Level-Bereich
+			uint8_t idx = p->in;
+			return 0x4000 + (p->out * 0x30) + idx;
 
-//		case channel:
-//			if (idx == -1) break;
-//			return idx * 0x30 | reg; // ok, da 0x30 Register pro Kanal
-//
-//		case MIX:
-//			if ((unsigned)p->out >= LEN(outputs)) break;
-//			if ((unsigned)p->in >= LEN(inputs)) break;
-//			return 0x2340 + p->out * 0x30 + p->in; // 0x30 pro Out, MIX beginnt bei 0x2340
-//
-//		case MIX_LEVEL:
-//			if ((unsigned)p->out >= LEN(outputs)) break;
-//			if ((unsigned)p->in >= LEN(inputs) + LEN(outputs)) break;
-//
-//			idx = p->in;
-//			if (idx >= LEN(inputs))
-//				idx += 0x30 - LEN(inputs); // korrektes Offset für Output-Quellen
-//
-//			return 0x4000 + p->out * 0x30 + idx; // 0x30 Register pro Output
-
-//		case MIX:
-//			if ((unsigned)p->out >= LEN(outputs)) break; // Ensure p->out is within the range of outputs
-//			if ((unsigned)p->in >= LEN(inputs)) break;   // Ensure p->in is within the range of inputs
-//			return 0x2000 | p->out << 6 | p->in;
-//
-//		case MIX_LEVEL:
-//			if ((unsigned)p->out >= LEN(outputs)) break; // Ensure p->out is within the range of outputs
-//			if ((unsigned)p->in >= LEN(inputs) + LEN(outputs)) break; // Ensure p->in is within the range of inputs and outputs
-//			idx = p->in;
-//			if (idx >= LEN(inputs)) idx += 0x20 - LEN(inputs); // Adjust idx for larger input range
-//			return 0x4000 | p->out << 6 | idx;
-
-//			channel:					if (idx == -1) break;
-//			return idx << 6 | reg;
-//		case MIX:					if ((unsigned)p->out >= LEN(outputs)) break;
-//			if ((unsigned)p->in >= LEN(inputs)) break;
-//			return 0x2000 | p->out << 6 | p->in;
-//		case MIX_LEVEL:				if ((unsigned)p->out >= LEN(outputs)) break;
-//			if ((unsigned)p->in >= LEN(inputs) + LEN(outputs)) break;
-//			idx = p->in;
-//			if (idx >= LEN(inputs)) idx += 0x20 - LEN(inputs);
-//			return 0x4000 | p->out << 6 | idx;
 
 		case REVERB:            return 0x3000;
 		case REVERB_TYPE:       return 0x3001;
@@ -528,7 +476,7 @@ static int ctltoreg(enum control ctl, const struct param *p)
 		case CLOCK_WCKTERM:           return 0x3067;
 
 		// Hardware
-		case HARDWARE_AESIN:       return 0x3078; // AES Input: 0=XLR, 1=Optical 2
+		case HARDWARE_AESIN:          return 0x3078; // AES Input: 0=XLR, 1=Optical 2
 		case HARDWARE_OPTICALOUT:     return 0x3079; // Optical Out 1: 0=ADAT, 1=S/PDIF
 		case HARDWARE_OPTICALOUT2:    return 0x307A; // Optical Out 2: 0=ADAT 1=SPDIF 2=AES
 		case HARDWARE_SPDIFOUT:       return 0x307B; // AES Channel Status: 0=Consumer, 1=Pro
@@ -580,8 +528,7 @@ static int ctltoreg(enum control ctl, const struct param *p)
 		roomeq:                       if (p->out == -1) break;
 		                              return reg + (p->out << 5);
 
-		//case REFRESH:                 return 0x3E03; // Reg for dump 1
-		case REFRESH: 			   return 0x3E04; // Reg for dump 2
+		case REFRESH: 		          return 0x3E04;
 
 		case DUREC_CONTROL:           return 0x3E9A;
 		case DUREC_DELETE:            return 0x3E9B;
@@ -603,8 +550,7 @@ const struct device ffufxiii = {
 	.inputslen = LEN(inputs),
 	.outputs = outputs,
 	.outputslen = LEN(outputs),
-	.refresh = 0x67CD, // dump 2
-	//.refresh = 0x234A, // dump 1
+	.refresh = 0x67CD,
 	.regtoctl = regtoctl,
 	.ctltoreg = ctltoreg,
 };

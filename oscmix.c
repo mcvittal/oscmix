@@ -89,7 +89,6 @@ static struct {
 	int vers;
 	int load;
 } dsp;
-static bool refreshing;
 
 static void oscsend(const char *addr, const char *type, ...);
 static void oscflush(void);
@@ -405,9 +404,9 @@ newoutputstereo(struct context *ctx, int val)
 	out = &outputs[ctx->param.out & ~1];
 	out[0].stereo = val;
 	out[1].stereo = val;
-	snprintf(ctx->addr, ctx->addrend - ctx->addr, "/output/%d/stereo", (int)(out - outputs));
-	oscsend(ctx->addr, ",i", val != 0);
 	snprintf(ctx->addr, ctx->addrend - ctx->addr, "/output/%d/stereo", (int)(out - outputs + 1));
+	oscsend(ctx->addr, ",i", val != 0);
+	snprintf(ctx->addr, ctx->addrend - ctx->addr, "/output/%d/stereo", (int)(out - outputs + 2));
 	oscsend(ctx->addr, ",i", val != 0);
 }
 
@@ -760,7 +759,6 @@ newmix(struct context *ctx, int val)
 	ispan = val & 0x8000;
 	val = ((val & 0x7fff) ^ 0x4000) - 0x4000;
 	calclevel(out, in, 0, &level);
-	in->width = level.width;
 	if (ispan) {
 		if (val < -100)
 			val = -100;
@@ -777,6 +775,7 @@ newmix(struct context *ctx, int val)
 		if ((in - inputs) & 1)
 			--in;
 		calclevel(out, in, 1, &level);
+		in->width = level.width;
 	}
 	snprintf(ctx->addr, ctx->addrend - ctx->addr, "/mix/%d/input/%d", (int)(out - outputs) + 1, (int)(in - inputs) + 1);
 	oscsend(ctx->addr, ",fi", level.vol > 0 ? 20.f * log10f(level.vol) : -INFINITY, level.pan);
@@ -1085,7 +1084,6 @@ setrefresh(struct context *ctx, struct oscmsg *msg)
 	dsp.vers = -1;
 	dsp.load = -1;
 	setval(ctx, device->refresh);
-	refreshing = true;
 	/* FIXME: needs lock */
 	for (i = 0; i < device->outputslen; ++i) {
 		pb = &inputs[device->inputslen + i];
@@ -1093,15 +1091,6 @@ setrefresh(struct context *ctx, struct oscmsg *msg)
 		oscsend(addr, ",i", pb->stereo);
 	}
 	oscflush();
-}
-
-static void
-newrefresh(struct context *ctx, int val)
-{
-	refreshing = false;
-	if (dflag)
-		fprintf(stderr, "refresh done. val: %d, context: %p\n", val, (void *)ctx);
-		//fprintf(stderr, "refresh done\n");
 }
 
 static const struct node lowcuttree[] = {
@@ -1222,8 +1211,8 @@ static const struct node roottree[] = {
 		{"playchan", OUTPUT_PLAYCHAN, .set=setint, .new=newint},
 		{"phase", OUTPUT_PHASE, .set=setbool, .new=newbool},
 		{"reflevel", OUTPUT_REFLEVEL, .set=setenum, .new=newenum, .names=(const char *const[]){
-			"+4dBu", "+13dBu", "+19dBu",
-		}, .nameslen=3}, // TODO: phones
+			"+4dBu", "+13dBu", "+19dBu", "+24dBu",
+		}, .nameslen=4}, // TODO: phones
 		{"crossfeed", OUTPUT_CROSSFEED, .set=setint, .new=newint},
 		{"volumecal", OUTPUT_VOLUMECAL, .set=setfixed, .new=newfixed, .min=-2400, .max=300, .scale=0.01},
 		{"lowcut", LOWCUT, .set=setbool, .new=newbool, .tree=lowcuttree},
@@ -1364,7 +1353,7 @@ static const struct node roottree[] = {
 		{NULL, DUREC_LENGTH, .new=newdureclength},
 		{0},
 	}},
-	{"refresh", REFRESH, .set=setrefresh, .new=newrefresh},
+	{"refresh", REFRESH, .set=setrefresh},
 	{0},
 };
 
@@ -1622,7 +1611,7 @@ handletimer(bool levels)
 	static int serial;
 	unsigned char buf[7];
 
-	if (levels && !refreshing) {
+	if (levels) {
 		/* XXX: ~60 times per second levels, ~30 times per second serial */
 		writesysex(2, NULL, 0, buf);
 	}

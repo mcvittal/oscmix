@@ -252,7 +252,7 @@ static enum control regtoctl(int reg, struct param *p) {
 		//case 0x3D4B: return HARDWARE_ARCDELTA;   // ARC Encoder Delta
 
 		//case 0x3F99: return REFRESH;                // Refresh
-		case 0x3F05: return REFRESH; 	// Indicator if Refresh is done
+		case 0x3F05: return UNKNOWN;
 
 
 
