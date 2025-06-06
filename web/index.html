@@ -13,7 +13,9 @@
 					<form id="channel-name-form" class="channel-name-form">
 						<input id="channel-name" class="channel-name" readonly>
 					</form>
-					<input class="channel-pan" id="pan" type="range" min="-100" max="100" step="1" value="0">
+						<label id="pan">
+							<div class="knob-target"></div>
+						</label>
 					<div class="channel-mute">
 						<label class="toggle-button">M<input id="mute" type="checkbox"></label>
 						<label class="toggle-button">S<input id="solo" type="checkbox"></label>
@@ -42,10 +44,21 @@
 							<option data-type="output">+4 dBu</option>
 							<option>+13 dBu</option>
 							<option>+19 dBu</option>
+							<option>+24 dBu</option>
 						</select></label>
-						<label data-flags="gain">Gain<input type="number" id="gain" min="0" max="24" step="0.5"></label>
+						<label data-flags="gain">Gain
+							<div class="knob-target"></div>
+						</label>
 						<label data-flags="autoset">Autoset<span><input type="checkbox" id="autoset"></span></label>
-						<label>FX<input type="number" id="fx" min="-65" max="0" step="0.5"></label>
+						<label>FX
+							<div class="fx-control">
+								<input type="range" class="fx-slider" orient="vertical" min="-65" max="0" step="0.5">
+								<input type="number" id="fx" min="-65" max="0" step="0.5">
+							</div>
+						</label>
+<!--						<label id="fx">-->
+<!--							<div class="knob-target"></div>-->
+<!--						</label>-->
 						<label data-type="output">Crossfeed<select id="crossfeed">
 							<option>Off</option>
 							<option>1</option>
@@ -153,20 +166,32 @@
 				<form id="connection">
 					<fieldset>
 						<label>Type<select id="connection-type">
-
-							<option id="connection-type-websocket">WebSocket</option>
-							<option id="connection-type-midi" selected>MIDI</option>
-
+							<option id="connection-type-websocket" selected>WebSocket</option>
+							<option id="connection-type-midi">MIDI</option>
 						</select></label>
 						<label class="connection-midi">MIDI Input<select id="connection-midi-input" ></select></label>
 						<label class="connection-midi">MIDI Output<select id="connection-midi-output" ></select></label>
 						<label class="connection-websocket">Server<input id="connection-websocket-address" size="1" value="ws://localhost:8222" ></label>
-
 					</fieldset>
 					<button id="connection-connect">Connect</button>
 					<button id="connection-disconnect">Disconnect</button>
 					<button id="connection-refresh">Refresh</button>
 					<button id="connection-reinitialise">Reinitialise</button>
+				</form>
+			</details>
+			<hr>
+			<details>
+				<summary>Debug<span id="debug"></span></summary>
+				<form id="debug">
+					<fieldset>
+						<label>Register:
+							<input id="debug-register" type="number" min="0">
+						</label>
+						<label>Value:
+							<input id="debug-value" type="number">
+						</label>
+						<button id="debug-set-register">Set Register</button>
+					</fieldset>
 				</form>
 			</details>
 			<hr>
@@ -242,7 +267,7 @@
 				</fieldset>
 			</details>
  			<hr>
-			<details open>
+			<details>
 				<summary>DURec</summary>
 				<fieldset>
 					<label>File:
@@ -332,11 +357,25 @@
 						<option>Off</option>
 						<option>On</option>
 					</select></label>
+					<label>CC Mode<select id="hardware-ccmode">
+						<option>Off</option>
+						<option>On</option>
+					</select></label>
 					<label>CC Mix<select id="hardware-ccmix">
 						<option>TotalMix</option>
 						<option>6 ch. + phones</option>
 						<option>8 ch.</option>
 						<option>20 ch.</option>
+					</select></label>
+					<label>Interface Mode<select id="hardware-interfacemode">
+						<option>Auto</option>
+						<option>USB2</option>
+						<option>USB3</option>
+						<option>CC</option>
+					</select></label>
+					<label>CC Routing<select id="hardware-ccrouting">
+						<option>All Ch.</option>
+						<option>Phones</option>
 					</select></label>
 					<label>Standalone MIDI<select id="hardware-standalonemidi"></select></label>
 					<label>Standalone ARC<select id="hardware-standalonearc">
@@ -349,7 +388,6 @@
 						<option>Keys</option>
 						<option>All</option>
 					</select></label>
-
 				</fieldset>
 			</details>
 		</div>
