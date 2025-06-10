@@ -404,9 +404,9 @@ newoutputstereo(struct context *ctx, int val)
 	out = &outputs[ctx->param.out & ~1];
 	out[0].stereo = val;
 	out[1].stereo = val;
-	snprintf(ctx->addr, ctx->addrend - ctx->addr, "/output/%d/stereo", (int)(out - outputs) + 1);
+	snprintf(ctx->addr, ctx->addrend - ctx->addr, "/output/%d/stereo", (int)(out - outputs + 1));
 	oscsend(ctx->addr, ",i", val != 0);
-	snprintf(ctx->addr, ctx->addrend - ctx->addr, "/output/%d/stereo", (int)(out - outputs) + 2);
+	snprintf(ctx->addr, ctx->addrend - ctx->addr, "/output/%d/stereo", (int)(out - outputs + 2));
 	oscsend(ctx->addr, ",i", val != 0);
 }
 
@@ -1294,11 +1294,14 @@ static const struct node roottree[] = {
 		{"opticalin", HARDWARE_OPTICALIN, .set=setenum, .new=newenum, .names=(const char *const[]){
 			"ADAT", "SPDIF",
 		}, .nameslen=2},
+		{"opticalin2", HARDWARE_OPTICALIN2, .set=setenum, .new=newenum, .names=(const char *const[]){
+			"ADAT 2", "SPDIF",
+		}, .nameslen=2},
 		{"opticalout", HARDWARE_OPTICALOUT, .set=setenum, .new=newenum, .names=(const char *const[]){
 			"ADAT", "SPDIF",
 		}, .nameslen=2},
 		{"opticalout2", HARDWARE_OPTICALOUT2, .set=setenum, .new=newenum, .names=(const char *const[]){
-			"ADAT", "SPDIF", "AES",
+			"ADAT 2", "SPDIF", "AES",
 		}, .nameslen=3},
 		{"spdifout", HARDWARE_SPDIFOUT, .set=setenum, .new=newenum, .names=(const char *const[]){
 			"Consumer", "Professional",
