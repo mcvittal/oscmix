@@ -9,64 +9,64 @@ static const char *const reflevel_input[] = {"-10dBV", "+4dBu", "Lo Gain"};
 static const char *const reflevel_output[] = {"-10dBV", "+4dBu", "Hi Gain"};
 
 static const struct channelinfo inputs[] = {
-	{"Mic 1",        INPUT_HAS_GAIN | INPUT_HAS_48V | INPUT_HAS_AUTOSET,
+	{"Mic 1",  INPUT_HAS_GAIN | INPUT_HAS_48V | INPUT_HAS_AUTOSET,
 			.gain = {0, 650},
 	},
-	{"Mic 2",        INPUT_HAS_GAIN | INPUT_HAS_48V | INPUT_HAS_AUTOSET,
+	{"Mic 2",  INPUT_HAS_GAIN | INPUT_HAS_48V | INPUT_HAS_AUTOSET,
 			.gain = {0, 650},
 	},
-	{"Inst/Line 3",       INPUT_HAS_GAIN | INPUT_HAS_REFLEVEL | INPUT_HAS_HIZ | INPUT_HAS_AUTOSET,
+	{"Inst/Line 3", INPUT_HAS_GAIN | INPUT_HAS_REFLEVEL | INPUT_HAS_HIZ | INPUT_HAS_AUTOSET,
 			.gain = {0, 120},
 			.reflevel = {reflevel_input, LEN(reflevel_input)},
 	},
-	{"Inst/Line 4",       INPUT_HAS_GAIN | INPUT_HAS_REFLEVEL | INPUT_HAS_HIZ | INPUT_HAS_AUTOSET,
+	{"Inst/Line 4", INPUT_HAS_GAIN | INPUT_HAS_REFLEVEL | INPUT_HAS_HIZ | INPUT_HAS_AUTOSET,
 			.gain = {0, 120},
 			.reflevel = {reflevel_input, LEN(reflevel_input)},
 	},
-	{"Analog 5",       INPUT_HAS_REFLEVEL,
+	{"Analog 5", INPUT_HAS_REFLEVEL,
 			.reflevel = {reflevel_input, LEN(reflevel_input)},
 	},
-	{"Analog 6",       INPUT_HAS_REFLEVEL,
+	{"Analog 6", INPUT_HAS_REFLEVEL,
 			.reflevel = {reflevel_input, LEN(reflevel_input)},
 	},
-	{"Analog 7",       INPUT_HAS_REFLEVEL,
+	{"Analog 7", INPUT_HAS_REFLEVEL,
 			.reflevel = {reflevel_input, LEN(reflevel_input)},
 	},
-	{"Analog 8",       INPUT_HAS_REFLEVEL,
+	{"Analog 8", INPUT_HAS_REFLEVEL,
 			.reflevel = {reflevel_input, LEN(reflevel_input)},
 	},
-	{"SPDIF 9",      0},
-	{"SPDIF 10",     0},
-	{"A/S 11",0},
-	{"A/S 12",0},
-	{"ADAT 13",      0},
-	{"ADAT 14",      0},
-	{"ADAT 15",      0},
-	{"ADAT 16",      0},
-	{"ADAT 17",      0},
-	{"ADAT 18",      0},
+	{"SPDIF 9",},
+	{"SPDIF 10",},
+	{"A/S 11"},
+	{"A/S 12"},
+	{"ADAT 13",},
+	{"ADAT 14",},
+	{"ADAT 15",},
+	{"ADAT 16",},
+	{"ADAT 17",},
+	{"ADAT 18",},
 };
 _Static_assert(LEN(inputs) == 18, "bad inputs");
 
 static const struct channelinfo outputs[] = {
-	{"Analog 1",       OUTPUT_HAS_REFLEVEL, .reflevel = {reflevel_output, LEN(reflevel_output)}},
-	{"Analog 2",       OUTPUT_HAS_REFLEVEL, .reflevel = {reflevel_output, LEN(reflevel_output)}},
-	{"Analog 3",       OUTPUT_HAS_REFLEVEL, .reflevel = {reflevel_output, LEN(reflevel_output)}},
-	{"Analog 4",       OUTPUT_HAS_REFLEVEL, .reflevel = {reflevel_output, LEN(reflevel_output)}},
-	{"Analog 5",       OUTPUT_HAS_REFLEVEL, .reflevel = {reflevel_output, LEN(reflevel_output)}},
-	{"Analog 6",       OUTPUT_HAS_REFLEVEL, .reflevel = {reflevel_output, LEN(reflevel_output)}},
-	{"Phones 7",     OUTPUT_HAS_REFLEVEL, .reflevel = {reflevel_output, LEN(reflevel_output)}},
-	{"Phones 8",     OUTPUT_HAS_REFLEVEL, .reflevel = {reflevel_output, LEN(reflevel_output)}},
-	{"SPDIF 9",      0},
-	{"SPDIF 10",     0},
-	{"A/S 11",0},
-	{"A/S 12",0},
-	{"ADAT 13",      0},
-	{"ADAT 14",      0},
-	{"ADAT 15",      0},
-	{"ADAT 16",      0},
-	{"ADAT 17",      0},
-	{"ADAT 18",      0},
+	{"Analog 1", OUTPUT_HAS_REFLEVEL, .reflevel = {reflevel_output, LEN(reflevel_output)}},
+	{"Analog 2", OUTPUT_HAS_REFLEVEL, .reflevel = {reflevel_output, LEN(reflevel_output)}},
+	{"Analog 3", OUTPUT_HAS_REFLEVEL, .reflevel = {reflevel_output, LEN(reflevel_output)}},
+	{"Analog 4", OUTPUT_HAS_REFLEVEL, .reflevel = {reflevel_output, LEN(reflevel_output)}},
+	{"Analog 5", OUTPUT_HAS_REFLEVEL, .reflevel = {reflevel_output, LEN(reflevel_output)}},
+	{"Analog 6", OUTPUT_HAS_REFLEVEL, .reflevel = {reflevel_output, LEN(reflevel_output)}},
+	{"Phones 7", OUTPUT_HAS_REFLEVEL, .reflevel = {reflevel_output, LEN(reflevel_output)}},
+	{"Phones 8", OUTPUT_HAS_REFLEVEL, .reflevel = {reflevel_output, LEN(reflevel_output)}},
+	{"SPDIF 9",},
+	{"SPDIF 10",},
+	{"A/S 11"},
+	{"A/S 12"},
+	{"ADAT 13",},
+	{"ADAT 14",},
+	{"ADAT 15",},
+	{"ADAT 16",},
+	{"ADAT 17",},
+	{"ADAT 18",},
 };
 _Static_assert(LEN(outputs) == 18, "bad outputs");
 
@@ -99,11 +99,19 @@ regtoctl(int reg, struct param *p)
 		flags = outputs[idx].flags;
 		reg += 0x1200;
 	}
-	//TODO: Find out the Mix Regs which will map to MIX enum
-	// return MIX;
+	// TODO: Find out the Mix Regs which will map to MIX enum
+	// Compared to FF802 (which has a 0x0100 offset for channels, too):
+	// These might be:
+	// 0x12E0 for AN 1 → AN 1 volume
+	// 0x12E1 for AN 2 → AN 1 volume
+	// 0x12E2 for AN 3 → AN 1 volume
+	// etc...
+	// 0x13E0 for AN 1 → AN 2 volume
+	// 0x13E1 for AN 2 → AN 2 volume
+	// 0x13E2 for AN 3 → AN 2 volume
+	// etc...
+	// after that, we should implement the logic and return MIX;
 
-
-	/* Global registers */
 	else {
 		p->in = -1;
 		p->out = -1;
@@ -182,12 +190,21 @@ regtoctl(int reg, struct param *p)
 		case 0x3C25: return ECHO_VOLUME;
 		case 0x3C26: return ECHO_WIDTH;
 
+		// looks similar to FF802...
 		case 0x3D20: return CLOCK_SOURCE;
 		case 0x3D21: return CLOCK_SAMPLERATE;
 		case 0x3D22: return CLOCK_WCKSINGLE;
 		case 0x3D40: return CLOCK_WCKTERM;
 		case 0x3D41: return HARDWARE_OPTICALOUT;
 		case 0x3D42: return HARDWARE_SPDIFOUT;
+
+		// TODO: Verify these (just a guess from FF802):
+		case 0x3D43: return HARDWARE_STANDALONEMIDI;
+		case 0x3D44: return HARDWARE_CCMODE;
+		// TODO: Verify these (these regs are quite important..., from FF802):
+		case 0x3F00: return HARDWARE_DSPVERLOAD;
+		case 0x3F01: return HARDWARE_DSPSTATUS;
+		case 0x3F02: return HARDWARE_DSPAVAIL;
 	}
 	return -1;
 }
@@ -259,7 +276,7 @@ ctltoreg(enum control ctl, const struct param *p)
 		case AUTOLEVEL_MAXGAIN:       reg = 0x81; goto channel;
 		case AUTOLEVEL_HEADROOM:      reg = 0x82; goto channel;
 		case AUTOLEVEL_RISETIME:      reg = 0x83; goto channel;
-			// TODO implement MIX and MIX_LEVEL logic
+			// TODO: implement MIX (see TODO in regtoctl) and MIX_LEVEL (regs >= 0x4000...) logic
 			//case MIX:
 			//case MIX_LEVEL:
 		case REVERB:                  return 0x3C00;
@@ -285,6 +302,7 @@ ctltoreg(enum control ctl, const struct param *p)
 		case ECHO_VOLUME:             return 0x3C25;
 		case ECHO_WIDTH:              return 0x3C26;
 
+		// looks similar to FF802...
 		case CLOCK_SOURCE:            return 0x3D20;
 		case CLOCK_SAMPLERATE:        return 0x3D21;
 		case CLOCK_WCKSINGLE:         return 0x3D22;
@@ -292,12 +310,20 @@ ctltoreg(enum control ctl, const struct param *p)
 		case HARDWARE_OPTICALOUT:     return 0x3D41;
 		case HARDWARE_SPDIFOUT:       return 0x3D42;
 
-		case REFRESH:                 return 0x3F99;
+		// TODO: Verify these (just a guess from FF802):
+		case HARDWARE_STANDALONEMIDI: return 0x3D43;
+		case HARDWARE_CCMODE:         return 0x3D44;
+		// TODO: Verify these (these 3 regs are quite important..., guess from FF802):
+		case HARDWARE_DSPVERLOAD:     return 0x3F00;
+		case HARDWARE_DSPSTATUS:      return 0x3F01;
+		case HARDWARE_DSPAVAIL:       return 0x3F02;
 
+		case REFRESH:                 return 0x3F99;
 		default:                      break;
 	}
 	return -1;
 
+	// TODO: Veriy if this works, otherwise we should move this into switch-case above
 channel:
 	if (idx == -1) return -1;
 	if (idx < LEN(inputs))
