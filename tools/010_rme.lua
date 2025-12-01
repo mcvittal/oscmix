@@ -40,32 +40,40 @@ if not math.log10 then
 	function math.log10(a) return math.log(a, 10) end
 end
 
-local endpoint_pf = Field.new('usb.endpoint_address.number')
-local f_subid
+
 
 
 ----------------------------------------------
 -- Begin of RME generic proto/dissector section
 ----------------------------------------------
+local endpoint_pf = Field.new('usb.endpoint_address.number')
+local idVendor_pf = Field.new('usb.idVendor')
+local idProduct_pf = Field.new('usb.idProduct')
+local f_subid
 
 local register_pf = ProtoField.uint16('usbrme.register', 'Register', base.HEX)
+local registerdesc_pf = ProtoField.string('usbrme.register.desc', 'Register Description')
 local levels_pf = ProtoField.uint32('usbrme.levels', 'Levels', base.HEX)
 local peak_pf = ProtoField.uint64('usbrme.peak', 'Peak', base.HEX)
 local rms_pf = ProtoField.uint32('usbrme.value', 'RMS', base.HEX)
-local device_name_pf = ProtoField.string("usbrme.device.name", "DeviceName")
-
-
+local valuedesc_pf = ProtoField.string('usbrme.value.desc', 'Value Description')
+local device_name_pf = ProtoField.string("usbrme.device.name", 'RME Device Name')
+local device_id_pf = ProtoField.uint16("usbrme.device.id", 'RME Device ID', base.HEX)
+local vendor_id_pf = ProtoField.uint16("usbrme.vendor.id", 'RME Vendor ID', base.HEX)
 ----------------------------------------------
 -- RME USB Proto
 ----------------------------------------------
 usb_rme_proto = Proto('usbrme', 'USB RME-Audio Protocol')
 usb_rme_proto.fields.value = ProtoField.uint16('usbrme.value', 'Value', base.HEX)
 usb_rme_proto.fields.register = register_pf
+usb_rme_proto.fields.registerdesc = registerdesc_pf
 usb_rme_proto.fields.levels = levels_pf
 usb_rme_proto.fields.peak_pf = peak_pf
 usb_rme_proto.fields.rms = rms_pf
+usb_rme_proto.fields.valuedesc = valuedesc_pf
 usb_rme_proto.fields.devicename = device_name_pf
-
+usb_rme_proto.fields.deviceid = device_id_pf
+usb_rme_proto.fields.vendorid = vendor_id_pf
 
 ----------------------------------------------
 -- functions, enums and fields for later use
@@ -116,7 +124,7 @@ local function format_volume(val)
 	if bit32.band(val, 0x8000) ~= 0 then
 		ref = 0x1000
 		val = bit32.band(val, 0x7fff)
-		else
+	else
 		ref = 0x8000
 	end
 	val = (bit32.bxor(val, 0x4000) - 0x4000) / ref
@@ -124,7 +132,7 @@ local function format_volume(val)
 	if val < 0 then
 		phase = ' Phase Inverted'
 		val = -val
-		else
+	else
 		phase = ''
 	end
 	return string.format('%.2f dB%s', 20 * math.log10(val), phase)
@@ -206,7 +214,7 @@ local function format_dsp_overload(val)
 	local result = {}
 	for i = 0, 7 do
 		local bit_val = bit32.band(bit32.rshift(value, i), 1)
-		result[#result + 1] = string.format("%s: %s", functions[i + 1], bit_val == 1 and "ok" or "overload")
+		result[#result + 1] = string.format("%s: %s", functions[i + 1], bit_val == 1 and "ok" or "overloaded")
 	end
 
 	local channel = bit32.rshift(value, 8)
@@ -329,8 +337,8 @@ local global_fields = {
 	[0x3d44] = {name='CC Mode Active', format=format_bool},
 	[0x3d45] = {name='Standalone ARC', format=format_enum{'Volume', '1s Op', 'Normal'}},
 	[0x3dff] = {name='USB-Mode: Poll Cycle from Host (0x0000-0x000f)', format=format_int},
-	--	[0x3f00] = {name='CC-Mode: Poll Cycle from Host (0x0000-0x000f)', format=format_int},
-	[0x3f00] = {name='DSP Version / DSP Load', format=format_fxload},
+		[0x3f00] = {name='CC-Mode: Poll Cycle from Host (0x0000-0x000f)', format=format_int},
+	--[0x3f00] = {name='DSP Version / DSP Load', format=format_fxload},
 	[0x3f01] = {name='DSP Function Available', format=format_dsp_available},
 	[0x3f02] = {name='DSP Function Overload', format=format_dsp_overload},
 	[0x3f05] = {name='Unknown - Gess: Dump finished', format=format_int},
@@ -659,6 +667,8 @@ end
 ----------------------------------------------
 function usb_rme_proto.dissector(buffer, pinfo, tree)
 	local endpoint = endpoint_pf()
+	local idVendor = idVendor_pf()
+	local idProduct = idProduct_pf()
 	local subid = f_subid()
 	local subtree = tree:add(usb_rme_proto, buffer(), 'USB RME Protocol Data')
 
@@ -668,126 +678,31 @@ function usb_rme_proto.dissector(buffer, pinfo, tree)
 	-- NOTE: Needs more fiddling, none of the Methods work yet
 	----------------------------------------------
 
-	--  Method 1: Get Root-TVB from buffer
-	----------------------------------------------
-	--    local device_name = "Initial (unknown) RME Device"
-	--    local frame_tvb = buffer:root()
-	--
-	--    if frame_tvb:len() >= 40 then
-	--        -- Vendor/Product-ID is always at pos 36:4 of frame
-	--        local vp_id_bytes = frame_tvb(36, 4)
-	--        local vp_id = vp_id_bytes:uint()  -- Big-Endian (Network Byte Order)
-	--
-	--        -- Debug
-	--        print(string.format("Frame length: %d Bytes", frame_tvb:len()))
-	--        print(string.format("VP_ID Bytes: %02x:%02x:%02x:%02x",
-	--              vp_id_bytes(0,1):uint(), vp_id_bytes(1,1):uint(),
-	--              vp_id_bytes(2,1):uint(), vp_id_bytes(3,1):uint()))
-	--        print(string.format("VP_ID as uint: 0x%08x", vp_id))
-	--
-	--        -- Get device from lookup table
-	--        device_name = device_lookup[vp_id] or "Unknown RME Device (not found in lookup table)"
-	--
-	--        print("Recognized RME Device: " .. device_name)
-	--    else
-	--        print("Frame too short to get RME Device " .. frame_tvb:len() .. " Bytes")
-	--    end
-	--
-	--    subtree:add(device_name_pf, device_name)
-
-
-	-- Method 2: Set device name based on USB device ID
-	----------------------------------------------
-	--    local vendor_id_field = usb_vendor_id_field()
-	--    local product_id_field = usb_product_id_field()
-	--
-	--    local device_name = "Unknown RME Device Name"
-	--
-	--    if vendor_id_field and product_id_field then
-	--        local vendor_id = vendor_id_field.value
-	--        local product_id = product_id_field.value
-	--        local vp_id = (vendor_id << 16) | product_id
-	--
-	--        -- Debug output
-	--        print(string.format("Vendor ID: 0x%04x, Product ID: 0x%04x, VP_ID: 0x%08x",
-	--              vendor_id, product_id, vp_id))
-	--
-	--        -- Get device name from lookup table
-	--        device_name = device_lookup[vp_id] or "RME Device Name not found in lookup table. Check script!"
-	--
-	--        print("Device recognized: " .. device_name)
-	--    else
-	--        print("USB Device Fields not found")
-	--    end
-	--
-	--    subtree:add(device_name_pf, device_name)
-	----------------------------------------------
-	-- Some learning session results -> turns out we have to inspect
-	-- raw frame tvb buffer as our proto has only access to usb payload
-	----------------------------------------------
-	--  function usb_rme_proto.dissector(buffer, pinfo, tree)
-	--	local endpoint = endpoint_pf()
-	--	local subid = f_subid()
-	--      local subtree = tree:add(usb_rme_proto, buffer(), 'USB RME Protocol Data')
-	--    local device_name = "None"
-	--    print("Buffer len: " .. buffer:len() .. " Bytes")
-	--
-	--
-	--    if buffer:len() >= 6 then
-	--    subtree:add(buffer(0,2),"The first two bytes: " .. buffer(0,2):uint())
-	--
-	--    subtree = subtree:add(buffer(2,2),"The next two bytes")
-	--    subtree:add(buffer(2,1),"The 3rd byte: " .. buffer(2,1):uint())
-	--    subtree:add(buffer(3,1),"The 4th byte: " .. buffer(3,1):uint())
-	--
-	--    subtree = subtree:add(buffer(4,2),"The next two bytes")
-	--    subtree:add(buffer(4,1),"The 5th byte: " .. buffer(4,1):uint())
-	--    subtree:add(buffer(5,1),"The 6th byte: " .. buffer(5,1):uint())
-	--    end
-
-	-- Method 3: Frame position 36:4 contains the vID/pID (4 bytes)
-	----------------------------------------------
-	----    if buffer:len() >= 36 then  -- Make sure the buffer is large enough
-	----        local vp_id_bytes = buffer(4, 4)
-	----
-	----        -- Read bytes as 32-bit value in correct order
-	----        local vp_id = vp_id_bytes:uint()  -- Big-Endian (Network Byte Order)
-	----
-	----        -- Debug output
-	----        print(string.format("VP_ID Bytes: %02x:%02x:%02x:%02x",
-	----              vp_id_bytes(0,1):uint(), vp_id_bytes(1,1):uint(),
-	----              vp_bytes(2,1):uint(), vp_id_bytes(3,1):uint()))
-	----        print(string.format("VP_ID als uint: 0x%08x", vp_id))
-	----
-	----        -- Get device name from lookup table
-	----        device_name = device_lookup[vp_id] or "Unknown RME Device"
-	----
-	----        print("Detected device:" .. device_name)
-	----    else
-	----        print("Buffer too short:" .. buffer:len() .. " Bytes")
-	----    end
-	--
-	--    subtree:add(device_name_pf, device_name)
-
+	
+	if idVendor then 
+		print ("idVendor: ", idVendor)
+		subsubtree = subtree:add(usb_rme_proto, buffer(i, 4), 'Vendor: RME')
+		--local subtree = tree:add(usb_rme_proto, buffer(), 'Vendor: RME')
+	end
 	if endpoint then
 		if endpoint.value == 12 or endpoint.value == 13 then
 			elseif endpoint.value == 5 or endpoint.value == 4 then
-			return levels_usb(buffer, pinfo, subtree)
-			else
+				return levels_usb(buffer, pinfo, subtree)
+		else
 			return
 		end
 		elseif subid then
 		if subid.value == 0 then
 			elseif subid.value >= 1 and subid.value <= 5 then
-			return levels_cc(buffer, pinfo, subtree, subid.value)
+				return levels_cc(buffer, pinfo, subtree, subid.value)
 			else
-			return
+				return
 		end
 		else
-		return
+			return
 	end
-	print('endpoint', endpoint, type(endpoint))
-	print('subid', subid)
+	--print('endpoint', endpoint, type(endpoint))
+	--print('subid', subid)
 	--if ep ~= 12 then return 0 end
 	pinfo.cols.protocol = usb_rme_proto.name
 	local length = buffer:len()
@@ -844,11 +759,13 @@ function usb_rme_proto.dissector(buffer, pinfo, tree)
 			regdesc, valdesc = format(reg, valbuf)
 		end
 		if regdesc then
-			regdesc = string.format('(%s)', regdesc)
+			regdesc = string.format('%s', regdesc)
 		end
-		if valdesc then valdesc = string.format('(%s)', valdesc) end
-		subsubtree:add_le(usb_rme_proto.fields.register, regbuf, reg, nil, regdesc)
-		subsubtree:add_le(usb_rme_proto.fields.value, valbuf, val, nil, valdesc)
+		if valdesc then valdesc = string.format('%s', valdesc) end
+		subsubtree:add_le(usb_rme_proto.fields.register, regbuf, reg, nil, nil)
+		subsubtree:add(usb_rme_proto.fields.registerdesc, regdesc, "Register Detail:", nil, regdesc)
+		subsubtree:add_le(usb_rme_proto.fields.value, valbuf, val, nil, nil)
+		subsubtree:add(usb_rme_proto.fields.valuedesc, val, "Value Detail:", nil, valdesc)
 		i = i + 4
 	end -- of while
 end -- of function usb_rme_proto.dissector
