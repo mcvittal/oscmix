@@ -1,11 +1,35 @@
 'use strict';
 
+import { Knob } from './knob.js';
 import { device_ff802 } from './device_ff802.js';
 import { device_ffucxii } from './device_ffucxii.js';
 import { device_ffufxiii } from './device_ffufxiii.js';
+import { device_ffucx } from './device_ffucx.js';
 
-const devices = [device_ff802, device_ffucxii, device_ffufxiii];
+const devices = [device_ff802, device_ffucxii, device_ffufxiii, device_ffucx];
 let currentDevice = device_ff802;
+
+updatePageTitle();
+
+// ARC Conn state
+let connectionStatus = {
+	connected: false,
+	oscActive: false,
+	deviceName: "Disconnected"
+};
+
+/* Style Handling */
+const styleSelector = document.getElementById('ui-style-select');
+const styleLink = document.querySelector('link[rel="stylesheet"]');
+const savedStyle = localStorage.getItem('selectedStyle');
+if(savedStyle) {
+	styleLink.href = savedStyle;
+	styleSelector.value = savedStyle;
+}
+styleSelector.addEventListener('change', (e) => {
+	styleLink.href = e.target.value;
+	localStorage.setItem('selectedStyle', e.target.value);
+});
 
 /* OSC */
 class OSCDecoder {
@@ -176,7 +200,6 @@ class ConnectionMIDI extends AbortController {
 					instance.exports.handlesysex(sysex.byteOffset, sysex.byteLength, jsdata);
 				} catch (e) {
 					console.error('Error processing sysex:', e);
-					// Optional: Ignorieren oder spezifische Behandlung für 2305-Fehler
 					const unsupportedCodes = ['2304', '2305'];
 					if (
 						currentDevice.deviceName === 'Fireface 802' && unsupportedCodes.some(code => e.message.includes(code))
@@ -216,6 +239,13 @@ class Interface {
 		this.methods = new Map();
 		this.durecFiles = [];
 		this.currentFile = -1;
+
+		for (let i = 0; i < currentDevice.outputNames.length; i++) {
+			this.methods.set(`/output/${i+1}/volumecal`, (args) => {
+				//
+				console.log(`VolumeCal for output ${i+1}: ${args[0]}`);
+			});
+		}
 	}
 
 	initDurec() {
@@ -226,7 +256,6 @@ class Interface {
 			return `${hrs.toString().padStart(2, '0')}:${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
 		};
 
-		// Dateiliste binden
 		iface.methods.set('/durec/numfiles', (args) => {
 			this.durecFiles.length = args[0];
 			this.updateDurecFileList();
@@ -262,7 +291,6 @@ class Interface {
 			document.getElementById('durec-time').max = args[1];
 		});
 
-		// Steuerelemente
 		document.getElementById('durec-play').addEventListener('click', () => {
 			if (this.currentFile >= 0) {
 				iface.send('/durec/file', ',i', [this.currentFile]);
@@ -278,7 +306,6 @@ class Interface {
 		});
 
 		document.getElementById('durec-delete').addEventListener('click', () => {
-			// Delete benötigt einen Parameter!
 			iface.send('/durec/delete', ',i', [this.currentFile]);
 		});
 
@@ -295,7 +322,7 @@ class Interface {
 			document.getElementById('durec-time-display').textContent = formatTime(e.target.value);
 		});
 
-		iface.bind('/durec/time', ',i', // Komma hinzufügen
+		iface.bind('/durec/time', ',i',
 				   document.getElementById('durec-time'), 'value',
 				   'input'
 				   );
@@ -339,13 +366,23 @@ class Interface {
 			const args = []
 			for (const type of types.substring(1)) {
 				switch (type) {
-				case 's': args.push(decoder.getString()); break;
-				case 'i': args.push(decoder.getInt()); break;
-				case 'f': args.push(decoder.getFloat()); break;
+					case 's': args.push(decoder.getString()); break;
+					case 'i': args.push(decoder.getInt()); break;
+					case 'f': args.push(decoder.getFloat()); break;
 				}
 			}
-			if (!addr.match(/\/level$/))
+			///---------------
+			// DEBUG LOGGING
+			// -------------
+			if (!addr.match(/\/level$/)
+				&& !addr.match(/\/autolevel\/meter$/)
+				&& !addr.match(/\/dynamics\/meter$/)
+				&& !addr.match(/\/hardware\/arcdelta$/)
+				&& !addr.match(/\/hardware\/arcbuttons$/)
+				)
 				console.debug(addr, args);
+
+
 			const method = this.methods.get(addr);
 			if (method)
 				method(args);
@@ -363,10 +400,10 @@ class Interface {
 		encoder.putString(types);
 		for (const [i, arg] of args.entries()) {
 			switch (types[1 + i]) {
-			case 'i': encoder.putInt(arg); break;
-			case 'f': encoder.putFloat(arg); break;
-			case 's': encoder.putString(arg); break;
-			default: throw new Error(`invalid OSC type '${types[1 + i]}'`);
+				case 'i': encoder.putInt(arg); break;
+				case 'f': encoder.putFloat(arg); break;
+				case 's': encoder.putString(arg); break;
+				default: throw new Error(`invalid OSC type '${types[1 + i]}'`);
 			}
 		}
 		this.#connection.send(encoder.data());
@@ -374,11 +411,15 @@ class Interface {
 
 	bind(addr, types, obj, prop, eventType) {
 		this.methods.set(addr, (args) => {
+
+			console.log(`OSC update for ${addr}:`, args);
+
+
 			const step = obj.step;
 			obj[prop] = step ? Math.round(args[0] / step) * step : args[0];
 			if (eventType)
 				obj.dispatchEvent(new OSCEvent(eventType))
-		});
+				});
 		if (eventType) {
 			obj.addEventListener(eventType, (event) => {
 				if (!(event instanceof OSCEvent))
@@ -412,42 +453,42 @@ class EQBand {
 		const A = Math.pow(10, this.#gain / 40);
 		const Q = this.#q
 		switch (this.#type) {
-		case EQBand.PEAK:
-			this.a0 = f4;
-			this.a1 = (A * A / (Q * Q) - 2) * f2;
-			this.a2 = 1;
-			this.b0 = f4;
-			this.b1 = (1 / (A * A * Q * Q) - 2) * f2;
-			break
-		case EQBand.LOW_SHELF:
-			this.a0 = A * A * f4;
-			this.a1 = A * (1 / (Q * Q) - 2) * f2;
-			this.a2 = 1;
-			this.b0 = f4 / (A * A);
-			this.b1 = (1 / (Q * Q) - 2) / A * f2;
-			break;
-		case EQBand.HIGH_SHELF:
-			this.a0 = A * A * f4;
-			this.a1 = A * A * A * (1 / (Q * Q) - 2) * f2;
-			this.a2 = A * A * A * A;
-			this.b0 = A * A * f4;
-			this.b1 = A * (1 / (Q * Q) - 2) * f2;
-			break;
-		case EQBand.LOW_PASS:
-			this.a0 = f4;
-			this.a1 = 0;
-			this.a2 = 0;
-			this.b0 = f4;
-			this.b1 = (1 / (Q * Q) - 2) * f2;
-			break;
-		case EQBand.HIGH_PASS:
-			this.a0 = 0;
-			this.a1 = 0;
-			this.a2 = 1;
-			this.b0 = f4;
-			this.b1 = (1 / (Q * Q) - 2) * f2;
-			break;
-		}
+			case EQBand.PEAK:
+				this.a0 = f4;
+				this.a1 = (A * A / (Q * Q) - 2) * f2;
+				this.a2 = 1;
+				this.b0 = f4;
+				this.b1 = (1 / (A * A * Q * Q) - 2) * f2;
+				break
+			case EQBand.LOW_SHELF:
+				this.a0 = A * A * f4;
+				this.a1 = A * (1 / (Q * Q) - 2) * f2;
+				this.a2 = 1;
+				this.b0 = f4 / (A * A);
+				this.b1 = (1 / (Q * Q) - 2) / A * f2;
+						   break;
+						   case EQBand.HIGH_SHELF:
+						   this.a0 = A * A * f4;
+						   this.a1 = A * A * A * (1 / (Q * Q) - 2) * f2;
+						   this.a2 = A * A * A * A;
+						   this.b0 = A * A * f4;
+						   this.b1 = A * (1 / (Q * Q) - 2) * f2;
+						   break;
+						   case EQBand.LOW_PASS:
+						   this.a0 = f4;
+						   this.a1 = 0;
+						   this.a2 = 0;
+						   this.b0 = f4;
+						   this.b1 = (1 / (Q * Q) - 2) * f2;
+						   break;
+						   case EQBand.HIGH_PASS:
+						   this.a0 = 0;
+						   this.a1 = 0;
+						   this.a2 = 1;
+						   this.b0 = f4;
+						   this.b1 = (1 / (Q * Q) - 2) * f2;
+						   break;
+						   }
 	}
 	set type(value) {
 		this.#type = value;
@@ -519,173 +560,19 @@ class EQPlot {
 					y *= band.eval(f2, f4);
 			}
 			y = Math.round(h / 2) + 0.5 + -10 * h / 48 * Math.log10(y);
-			points.push(x, y);
-		}
+						   points.push(x, y);
+						   }
 		this.#curve.setAttribute('points', points.join(' '));
 	}
 }
 
-class Knob {
-	constructor(options) {
-		this.id = options.id;
-		this.min = parseFloat(options.min);
-		this.max = parseFloat(options.max);
-		this.value = parseFloat(options.value) || this.min;
-		this.unit = options.unit || '';
-		this.size = options.size || 40;
-		this.step = options.step || 1;
-		this.resetValue = options.resetValue !== undefined ? options.resetValue : 0;
-		this.sendDuringDrag = options.sendDuringDrag || false;
-		this.sendInterval = options.sendInterval || 100;
-		this.lastSent = 0;
-		this.updateFromOSC = this.updateFromOSC.bind(this);
 
-		this.createKnob();
-		this.setupEventListeners();
-	}
-
-	createKnob() {
-		this.container = document.createElement('div');
-		this.container.className = 'knob-container';
-		this.container.id = `knob-${this.id}`;
-
-		this.knob = document.createElement('div');
-		this.knob.className = 'knob';
-		this.knob.style.width = `${this.size}px`;
-		this.knob.style.height = `${this.size}px`;
-
-		this.valueDisplay = document.createElement('div');
-		this.valueDisplay.className = 'knob-value';
-
-		this.container.appendChild(this.knob);
-		this.container.appendChild(this.valueDisplay);
-
-		this.updateDisplay();
-	}
-
-	setupEventListeners() {
-		this.isDragging = false;
-		this.startY = 0;
-		this.startValue = 0;
-		this.valueChanged = false;
-		this.knob.addEventListener('mousedown', this.handleMouseDown.bind(this));
-		document.addEventListener('mousemove', this.handleMouseMove.bind(this));
-		document.addEventListener('mouseup', this.handleMouseUp.bind(this));
-		this.knob.addEventListener('touchstart', this.handleTouchStart.bind(this));
-		document.addEventListener('touchmove', this.handleTouchMove.bind(this));
-		document.addEventListener('touchend', this.handleTouchEnd.bind(this));
-		this.knob.addEventListener('dblclick', this.handleDoubleClick.bind(this));
-	}
-
-	handleMouseDown(e) {
-		this.isDragging = true;
-		this.startY = e.clientY;
-		this.startValue = this.value;
-		this.valueChanged = false;
-		e.preventDefault();
-	}
-
-	handleMouseMove(e) {
-		if (!this.isDragging) return;
-
-		const deltaY = this.startY - e.clientY;
-		this.updateValueFromDrag(deltaY);
-	}
-
-	handleMouseUp() {
-		this.finalizeDrag();
-	}
-
-	handleTouchStart(e) {
-		this.isDragging = true;
-		this.startY = e.touches[0].clientY;
-		this.startValue = this.value;
-		this.valueChanged = false;
-		e.preventDefault();
-	}
-
-	handleTouchMove(e) {
-		if (!this.isDragging) return;
-
-		const deltaY = this.startY - e.touches[0].clientY;
-		this.updateValueFromDrag(deltaY);
-	}
-
-	handleTouchEnd() {
-		this.finalizeDrag();
-	}
-
-	handleDoubleClick() {
-		this.value = this.resetValue;
-		this.updateDisplay();
-		this.triggerUserChange();
-	}
-
-	updateValueFromDrag(deltaY) {
-		const stepFactor = 0.1 * this.step;
-		let newValue = this.startValue + (deltaY * stepFactor);
-		newValue = Math.round(newValue / this.step) * this.step;
-		newValue = Math.min(this.max, Math.max(this.min, newValue));
-
-		if (newValue !== this.value) {
-			this.value = newValue;
-			this.updateDisplay();
-			this.valueChanged = true;
-			if (this.sendDuringDrag) {
-				const now = Date.now();
-				if (now - this.lastSent > this.sendInterval) {
-					this.triggerUserChange();
-					this.lastSent = now;
-				}
-			}
-		}
-	}
-
-	finalizeDrag() {
-		this.isDragging = false;
-		if (this.valueChanged && (!this.sendDuringDrag || this.value !== this.startValue)) {
-			this.triggerUserChange();
-		}
-	}
-
-	updateDisplay() {
-		this.value = Math.max(this.min, Math.min(this.max, this.value));
-		const angle = 45 + ((this.value - this.min) / (this.max - this.min)) * 270;
-		this.knob.style.transform = `rotate(${angle}deg)`;
-		this.valueDisplay.textContent = `${this.value.toFixed(1)}${this.unit ? ' ' + this.unit : ''}`;
-	}
-
-	updateFromOSC(value) {
-		const roundedValue = Math.round(value / this.step) * this.step;
-		const clippedValue = Math.min(this.max, Math.max(this.min, roundedValue));
-		if (Math.abs(clippedValue - this.value) > 0.01) {
-			this.value = clippedValue;
-			this.updateDisplay();
-		}
-	}
-
-	triggerUserChange() {
-		const event = new CustomEvent('user-change', {
-			detail: {
-				value: this.value,
-				id: this.id
-			}
-		});
-		this.container.dispatchEvent(event);
-	}
-
-	get element() {
-		return this.container;
-	}
-}
-// MARK: Channel class
 class Channel {
 	static INPUT = 'input';
 	static OUTPUT = 'output';
 	static PLAYBACK = 'playback';
 
 	static #elements = new Set([
-		'mute',
 		'fx',
 		'stereo',
 		'record',
@@ -726,6 +613,39 @@ class Channel {
 		'autolevel/maxgain',
 		'autolevel/headroom',
 		'autolevel/risetime',
+		'roomeq',
+		'roomeq/delay',
+		'roomeq/band1type',
+		'roomeq/band1gain',
+		'roomeq/band1freq',
+		'roomeq/band1q',
+		'roomeq/band2gain',
+		'roomeq/band2freq',
+		'roomeq/band2q',
+		'roomeq/band3gain',
+		'roomeq/band3freq',
+		'roomeq/band3q',
+		'roomeq/band4gain',
+		'roomeq/band4freq',
+		'roomeq/band4q',
+		'roomeq/band5gain',
+		'roomeq/band5freq',
+		'roomeq/band5q',
+		'roomeq/band6gain',
+		'roomeq/band6freq',
+		'roomeq/band6q',
+		'roomeq/band7gain',
+		'roomeq/band7freq',
+		'roomeq/band7q',
+		'roomeq/band8type',
+		'roomeq/band8gain',
+		'roomeq/band8freq',
+		'roomeq/band8q',
+		'roomeq/band9type',
+		'roomeq/band9gain',
+		'roomeq/band9freq',
+		'roomeq/band9q',
+		'volumecal',
 	]);
 
 	static submixChanged() {
@@ -748,28 +668,38 @@ class Channel {
 		const view = document.forms.view.elements;
 		const gainTarget = fragment.querySelector('label[data-flags="gain"] .knob-target');
 		if (gainTarget) {
+			// Erstelle den Knob
 			const gainKnob = new Knob({
-				id: 'gain',
+				id: `gain-${type}-${index}`,
 				min: 0,
-				max: 12,
+				max: 75,
 				value: 0,
 				unit: 'dB',
 				size: 25,
 				step: 0.5,
 				resetValue: 0,
 				sendDuringDrag: true,
-				sendInterval: 150
+				sendInterval: 150,
+				borderColor: '#000000ab',
+				valueColor: '#ffcc00'     // Gelb-orange Schrift
 			});
+
+			// Füge den Knob in den Container ein
 			gainTarget.innerHTML = '';
 			gainTarget.appendChild(gainKnob.element);
+
+			// Event-Handler für Benutzeränderungen
 			gainKnob.element.addEventListener('user-change', (event) => {
 				const value = event.detail.value;
 				iface.send(`/${type}/${index+1}/gain`, ',f', [value]);
 			});
+
+			// OSC-Update-Handler
 			iface.methods.set(`/${type}/${index+1}/gain`, (args) => {
 				gainKnob.updateFromOSC(args[0]);
 			});
 		}
+	
 
 		const panTarget = fragment.querySelector('label[id="pan"] .knob-target');
 		let panKnob;
@@ -778,13 +708,15 @@ class Channel {
 				id: `pan-${type}-${index}`,
 				min: -100,
 				max: 100,
-				value: 0,
+				value: 0.0,
 				unit: '',
 				size: 25,
 				step: 1,
 				resetValue: 0,
 				sendDuringDrag: true,
-				sendInterval: 150
+				sendInterval: 150,
+				borderColor: '#000000ab',    // Roter Rand
+				valueColor: 'orange'     // Gelb-orange Schrift
 			});
 			panTarget.innerHTML = '';
 			panTarget.appendChild(panKnob.element);
@@ -801,6 +733,74 @@ class Channel {
 				panKnob.updateFromOSC(args[0]);
 			});
 		}
+//		let fxKnob; // Deklaration außerhalb
+//
+//		const fxTarget = fragment.querySelector('label[data-flags="fx"] .knob-target');
+//		if (fxTarget) {
+//			fxKnob = new Knob({ // Zuweisung statt Neudeklaration
+//				id: `fx-${type}-${index}`,
+//				min: -65,
+//				max: 0,
+//				value: -65,
+//				unit: 'dB',
+//				size: 25,
+//				step: 0.5,
+//				resetValue: -65,
+//				sendDuringDrag: true,
+//				sendInterval: 150,
+//				borderColor: '#0000ff',
+//				valueColor: 'white'
+//			});
+//
+//			fxTarget.innerHTML = '';
+//			fxTarget.appendChild(fxKnob.element);
+//
+//			fxKnob.element.addEventListener('user-change', (event) => {
+//				const value = event.detail.value;
+//				iface.send(`/${type}/${index+1}/fx`, ',f', [value]);
+//			});
+//
+//			// OSC-Handler INSIDE the if-block setzen
+//			iface.methods.set(`/${type}/${index+1}/fx`, (args) => {
+//				fxKnob.updateFromOSC(args[0]);
+//			});
+//		}
+		// VolumeCal Knob für Outputs
+//		if (type === Channel.OUTPUT) {
+//			//console.error('VolumeCal target ');
+//			const volumeCalTarget = fragment.querySelector('[data-flags="volumecal"] .knob-target');
+//			let volumeCalKnob;
+//			if (volumeCalTarget) {
+//				volumeCalKnob = new Knob({
+//					id: `volumecal-${index}`,
+//					min: -12,
+//					max: 12,
+//					value: 0,
+//					unit: 'dB',
+//					size: 25,
+//					step: 0.5,
+//					resetValue: 0,
+//					sendDuringDrag: true,
+//					sendInterval: 150,
+//					borderColor: '#00ff00',  // Grüner Rahmen
+//					valueColor: '#00ffff'    // Cyan Text
+//				});
+//
+//				volumeCalTarget.innerHTML = '';
+//				volumeCalTarget.appendChild(volumeCalKnob.element);
+//
+//				volumeCalKnob.element.addEventListener('user-change', (event) => {
+//					const value = event.detail.value;
+//					iface.send(`/output/${index+1}/volumecal`, ',f', [value]);
+//				});
+//
+//				iface.methods.set(`/output/${index+1}/volumecal`, (args) => {
+//					volumeCalKnob.updateFromOSC(args[0]);
+//				});
+//			} else {
+//				console.error('VolumeCal target not found in template');
+//			}
+//		}
 
 		const fxInput = fragment.getElementById('fx');
 		const fxSlider = fragment.querySelector('.fx-slider');
@@ -842,54 +842,53 @@ class Channel {
 		const prefix = `/${type}/${index + 1}`;
 		const flags = currentDevice.getFlags(type, index);
 		switch (type) {
-		case Channel.INPUT:
-			flags.push('input');
-			defName = currentDevice.inputNames[index];
-			break;
-		case Channel.PLAYBACK:
-			flags.push('playback');
-			defName = currentDevice.outputNames[index];
-			break;
-		// MARK: OUTPUT Channel 1
-		case Channel.OUTPUT:
-			flags.push('output')
-			defName = currentDevice.outputNames[index];
+			case Channel.INPUT:
+				flags.push('input');
+				defName = currentDevice.inputNames[index];
+				break;
+			case Channel.PLAYBACK:
+				flags.push('playback');
+				defName = currentDevice.outputNames[index];
+				break;
+			case Channel.OUTPUT:
+				flags.push('output')
+				defName = currentDevice.outputNames[index];
 
-			const selects = document.querySelectorAll('select.channel-volume-output');
-			for (const select of selects) {
-				const option = new Option(defName);
-				option.value = index;
-				select.add(option);
-			}
-			if (left) {
-				stereo.addEventListener('change', (event) => {
-					const options = document.querySelectorAll('option[value="' + index + '"]');
-					for (const option of options)
-						option.disabled = event.target.checked;
-				});
-			}
-
-			const submix = fragment.getElementById('submix');
-			submix.value = index;
-			fragment.children[0].addEventListener('click', (event) => {
-				if (submix.checked)
-					return;
-				if (view.routingmode.value == 'submix') {
-					view.submix.value = index;
-					Channel.submixChanged();
+				const selects = document.querySelectorAll('select.channel-volume-output');
+				for (const select of selects) {
+					const option = new Option(defName);
+					option.value = index;
+					select.add(option);
 				}
-			});
+				if (left) {
+					stereo.addEventListener('change', (event) => {
+						const options = document.querySelectorAll('option[value="' + index + '"]');
+						for (const option of options)
+							option.disabled = event.target.checked;
+					});
+				}
 
-			volumeRange.oninput = volumeNumber.onchange = (event) => {
-				volumeRange.value = event.target.value;
-				volumeNumber.value = event.target.value;
-				iface.send(prefix + '/volume', ',f', [event.target.value]);
-			};
-			iface.methods.set(prefix + '/volume', (args) => {
-				volumeRange.value = args[0];
-				volumeNumber.value = args[0];
-			});
-			break;
+				const submix = fragment.getElementById('submix');
+				submix.value = index;
+				fragment.children[0].addEventListener('click', (event) => {
+					if (submix.checked)
+						return;
+					if (view.routingmode.value == 'submix') {
+						view.submix.value = index;
+						Channel.submixChanged();
+					}
+				});
+
+				volumeRange.oninput = volumeNumber.onchange = (event) => {
+					volumeRange.value = event.target.value;
+					volumeNumber.value = event.target.value;
+					iface.send(prefix + '/volume', ',f', [event.target.value]);
+				};
+				iface.methods.set(prefix + '/volume', (args) => {
+					volumeRange.value = args[0];
+					volumeNumber.value = args[0];
+				});
+				break;
 		}
 
 
@@ -944,7 +943,6 @@ class Channel {
 			}
 
 		}
-		// MARK: Doubleclick Event Listeners
 		volumeRange.addEventListener('dblclick', (event) => {
 			const target = event.target;
 			if (target.valueAsNumber === 0) {
@@ -994,7 +992,6 @@ class Channel {
 			iface.send(prefix + '/name', ',s', [name.value]);
 			return false;
 		});
-		// MARK: Level Meter
 		this.meter = fragment.getElementById('volume-meter');
 		this.meterValue = fragment.getElementById('volume-meter-value');
 		iface.methods.set(prefix + '/level', (args) => {
@@ -1002,12 +999,12 @@ class Channel {
 			if (view.meterrms.checked) index += 1;
 			if (view.meterfx.checked && args.length >= 4) index += 2;
 			const value = Math.max(args[index], -65);
-			if (this.meter.value != value) {
-				this.meter.value = value;
-				this.meterValue.textContent = value == -Infinity ? 'UFL' : value.toFixed(1);
-			}
+
+			const percent = Math.min(100, Math.max(0, ((value + 65) / 71) * 100));
+			this.meter.querySelector('.meter-fill').style.height = `${percent}%`;
+
+			this.meterValue.textContent = value == -Infinity ? 'UFL' : value.toFixed(1);
 		});
-		// MARK: Level Meter Stereo
 		if (left) {
 			stereo.addEventListener('change', (event) => {
 				if (event.target.checked) {
@@ -1057,7 +1054,7 @@ class Channel {
 				for (const prop of ['gain', 'freq', 'q']) {
 					const node = fragment.getElementById(`eq/band${i+1}${prop}`);
 					node.addEventListener('change', (event) => {
-						band[prop] = event.target.value;
+						band[prop] = event.target.valueAsNumber;
 						this.eq.update();
 					});
 				}
@@ -1079,22 +1076,74 @@ class Channel {
 			});
 		}
 
+
+		// In der Channel-Klasse, Mute-Checkbox anpassen:
+		const muteCheckbox = fragment.querySelector('.mute-checkbox');
+		if (muteCheckbox) {
+			// Bindet OSC-Adresse an die Checkbox
+			iface.bind(prefix + '/mute', ',i', muteCheckbox, 'checked', 'change');
+
+			// Visuelles Feedback für Mute-Status
+			muteCheckbox.addEventListener('change', (event) => {
+				const channelElement = event.target.closest('.channel');
+				if (channelElement) {
+					channelElement.classList.toggle('muted', event.target.checked);
+				}
+			});
+		}
+
+		const soloCheckbox = fragment.querySelector('.solo-checkbox');
+		if (soloCheckbox) {
+			iface.bind(prefix + '/solo', ',i', soloCheckbox, 'checked', 'change');
+		}
+
+		const muteEnable = document.getElementById('controlroom-muteenable');
+		muteEnable.addEventListener('change', () => {
+			document.body.classList.toggle('global-mute-enabled', muteEnable.checked);
+		});
+
+		const soloEnable = document.getElementById('main-soloenable');
+		soloEnable.addEventListener('change', () => {
+			document.body.classList.toggle('global-solo-enabled', soloEnable.checked);
+		});
+
+		const recordCheckbox = fragment.querySelector('.record-checkbox');
+		if (recordCheckbox) {
+			iface.bind(prefix + '/record', ',i', recordCheckbox, 'checked', 'change');
+		}
+
+		const playCheckbox = fragment.querySelector('.play-checkbox');
+		if (playCheckbox) {
+			iface.bind(prefix + '/play', ',i', playCheckbox, 'checked', 'change');
+		}
+
+
 		for (const node of fragment.querySelectorAll('[id]')) {
 			if (Channel.#elements.has(node.id)) {
 				const type = node.step && node.step < 1 ? ',f' : ',i';
 				let prop;
+				let eventType = 'change';
 				switch (node.constructor) {
-				case HTMLSelectElement:
-					prop = 'selectedIndex';
-					break;
-				case HTMLInputElement:
-					switch (node.type) {
-					case 'number': prop = 'valueAsNumber'; break;
-					case 'checkbox': prop = 'checked'; break;
-					}
-					break;
+					case HTMLSelectElement:
+						prop = 'selectedIndex';
+						break;
+					case HTMLInputElement:
+						switch (node.type) {
+							case 'number':
+							case 'range': // Füge range hinzu
+								prop = 'valueAsNumber';
+								break;
+							case 'checkbox':
+								prop = 'checked';
+								break;
+						}
+						break;
 				}
-				iface.bind(prefix + '/' + node.id, type, node, prop, 'change');
+
+
+				if (prop) {
+					iface.bind(prefix + '/' + node.id, type, node, prop, eventType);
+				}
 			}
 			node.removeAttribute('id');
 		}
@@ -1104,7 +1153,44 @@ class Channel {
 
 
 
-// MARK: setupInterface
+function updatePageTitle() {
+	if (currentDevice) {
+		document.title = `oscmix - ${currentDevice.deviceName}`;
+	} else {
+		document.title = "oscmix - Generic";
+	}
+}
+
+
+
+function updateConnectionStatus(connected, oscActive, deviceName) {
+	connectionStatus = {
+		connected,
+		oscActive,
+		deviceName: deviceName || connectionStatus.deviceName
+	};
+
+
+	if (arcControlWindow && !arcControlWindow.closed) {
+		arcControlWindow.postMessage({
+			type: 'CONNECTION_STATUS',
+			...connectionStatus
+		}, '*');
+	}
+}
+
+function handleStatusRequests() {
+	window.addEventListener('message', (event) => {
+		if (event.data.type === 'REQUEST_STATUS_UPDATE') {
+			if (arcControlWindow && !arcControlWindow.closed) {
+				arcControlWindow.postMessage({
+					type: 'CONNECTION_STATUS',
+					...connectionStatus
+				}, '*');
+			}
+		}
+	});
+}
 
 const iface = new Interface();
 
@@ -1113,7 +1199,6 @@ function setupInterface() {
 
 	const connectionType = document.getElementById('connection-type');
 
-	// MARK: MIDI Connection Setup
 	const midiPorts = {
 		input: document.getElementById('connection-midi-input'),
 		output: document.getElementById('connection-midi-output'),
@@ -1136,23 +1221,22 @@ function setupInterface() {
 	function midiStateChanged(event) {
 		const select = midiPorts[event.port.type];
 		switch (event.port.state) {
-		case 'connected':
-			select.add(new Option(event.port.name, event.port.id));
-			break;
-		case 'disconnected':
-			let i = 0;
-			for (const option of select.options) {
-				if (option.value == event.port.id) {
-					select.remove(i);
-					break;
+			case 'connected':
+				select.add(new Option(event.port.name, event.port.id));
+				break;
+			case 'disconnected':
+				let i = 0;
+				for (const option of select.options) {
+					if (option.value == event.port.id) {
+						select.remove(i);
+						break;
+					}
+					++i;
 				}
-				++i;
-			}
-			break;
+				break;
 		}
 	}
 
-	// MARK: MIDI Connection Listener
 	let midiAccess;
 	connectionType.dataset.value = connectionType.value;
 	connectionType.addEventListener('change', (event) => {
@@ -1183,9 +1267,15 @@ function setupInterface() {
 					const inputPort = access.inputs.get(midiPorts.input.value);
 					const outputPort = access.outputs.get(midiPorts.output.value);
 					currentDevice = detectDevice(inputPort?.name) || detectDevice(outputPort?.name);
+					updatePageTitle();
 					if (currentDevice) {
 						console.log('Active device:', currentDevice.deviceName);
 						reinitializeUI();
+						updateConnectionStatus(
+											   false, // Noch nicht verbunden
+											   false,
+											   currentDevice.deviceName
+											   );
 					}
 				};
 
@@ -1206,11 +1296,11 @@ function setupInterface() {
 				midiAccess = access;
 				midiAccess.addEventListener('statechange', midiStateChanged);
 				updateCurrentDevice();
+
 			});
 		}
 	});
 
-	// MARK: Connection Type Listener
 	const icon = document.getElementById('connection-icon');
 	let connection;
 	const connectionForm = document.getElementById('connection');
@@ -1219,45 +1309,54 @@ function setupInterface() {
 			connection.abort();
 			reinitializeUI();
 		}
+//		if (event.submitter.id == 'connection-refresh') {
+//			iface.send('/refresh', ',', []);
+//		}
 		event.preventDefault();
 		if (connection)
 			connection.abort();
 		delete icon.dataset.state;
 		if (event.submitter.id == 'connection-disconnect') {
 			icon.textContent = '';
+			updateConnectionStatus(false, false);
 			return;
 		}
 		const elements = event.target.elements;
 		icon.textContent = elements['connection-type'].value;
 		switch (elements['connection-type'].value) {
-		case 'WebSocket':
-			connection = new ConnectionWebSocket(new WebSocket(elements['connection-websocket-address'].value));
-			break;
-		case 'MIDI':
-			const input = midiAccess.inputs.get(elements['connection-midi-input'].value);
-			if (!input)
-				throw new Error('no MIDI input');
-			const output = midiAccess.outputs.get(elements['connection-midi-output'].value);
-			if (!output)
-				throw new Error('no MIDI output');
-			connection = new ConnectionMIDI(input, output);
-			break;
-		default:
-			throw new Error('unknown connection type');
+			case 'WebSocket':
+				connection = new ConnectionWebSocket(new WebSocket(elements['connection-websocket-address'].value));
+				break;
+			case 'MIDI':
+				const input = midiAccess.inputs.get(elements['connection-midi-input'].value);
+				if (!input)
+					throw new Error('no MIDI input');
+				const output = midiAccess.outputs.get(elements['connection-midi-output'].value);
+				if (!output)
+					throw new Error('no MIDI output');
+				connection = new ConnectionMIDI(input, output);
+				break;
+			default:
+				throw new Error('unknown connection type');
 		}
 		connection.signal.addEventListener('abort', () => {
 			icon.dataset.state = 'failed';
 			connection = null;
+
+			updateConnectionStatus(false, false);
+
 		}, {once: true});
+
 		connection.ready.then(() => {
 			iface.connection = connection;
 			icon.textContent = elements['connection-type'].value;
 			icon.dataset.state = 'connected';
+			updatePageTitle();
 			iface.send('/refresh', ',', []);
+			updateConnectionStatus(true, true, currentDevice.deviceName);
 		}).catch(console.error);
 	});
 
-	// MARK: Make Channels
 	/* make channels */
 	for (const [type, id] of [[Channel.INPUT, 'inputs'], [Channel.PLAYBACK, 'playbacks'], [Channel.OUTPUT, 'outputs']]) {
 		const div = document.getElementById(id);
@@ -1274,7 +1373,6 @@ function setupInterface() {
 	document.forms.view.elements.submix.value = 0;
 	Channel.submixChanged();
 
-	// MARK: Interface Bindings in setupInterface
 	iface.bind('/reverb', ',i', document.getElementById('reverb-enabled'), 'checked', 'change');
 	const reverbType = document.getElementById('reverb-type');
 	const reverbRoomScale = document.getElementById('reverb-roomscale');
@@ -1305,7 +1403,6 @@ function setupInterface() {
 	iface.bind('/reverb/smooth', ',i', document.getElementById('reverb-smooth'), 'valueAsNumber', 'change');
 	iface.bind('/reverb/volume', ',f', document.getElementById('reverb-volume'), 'valueAsNumber', 'change');
 	iface.bind('/reverb/width', ',f', document.getElementById('reverb-width'), 'valueAsNumber', 'change');
-	// Echo
 	iface.bind('/echo', ',i', document.getElementById('echo-enabled'), 'checked', 'change');
 	iface.bind('/echo/type', ',i', document.getElementById('echo-type'), 'selectedIndex', 'change');
 	iface.bind('/echo/delay', ',f', document.getElementById('echo-delay'), 'valueAsNumber', 'change');
@@ -1313,33 +1410,50 @@ function setupInterface() {
 	iface.bind('/echo/hicut', ',i', document.getElementById('echo-highcut'), 'selectedIndex', 'change');
 	iface.bind('/echo/volume', ',f', document.getElementById('echo-volume'), 'valueAsNumber', 'change');
 	iface.bind('/echo/width', ',f', document.getElementById('echo-width'), 'valueAsNumber', 'change');
-	// Control Room
 	iface.bind('/controlroom/mainout', ',i', document.getElementById('controlroom-mainout'), 'selectedIndex', 'change');
 	iface.bind('/controlroom/mainmono', ',i', document.getElementById('controlroom-mainmono'), 'checked', 'change');
 	iface.bind('/controlroom/muteenable', ',i', document.getElementById('controlroom-muteenable'), 'checked', 'change');
 	iface.bind('/controlroom/dimreduction', ',f', document.getElementById('controlroom-dimreduction'), 'valueAsNumber', 'change');
 	iface.bind('/controlroom/dim', ',i', document.getElementById('controlroom-dim'), 'checked', 'change');
 	iface.bind('/controlroom/recallvolume', ',f', document.getElementById('controlroom-recallvolume'), 'valueAsNumber', 'change');
-	// Clock
 	iface.bind('/clock/source', ',i', document.getElementById('clock-source'), 'selectedIndex', 'change');
 	iface.bind('/clock/samplerate', ',i', document.getElementById('clock-samplerate'), 'textContent');
 	iface.bind('/clock/wckout', ',i', document.getElementById('clock-wckout'), 'checked', 'change');
 	iface.bind('/clock/wcksingle', ',i', document.getElementById('clock-wcksingle'), 'checked', 'change');
 	iface.bind('/clock/wckterm', ',i', document.getElementById('clock-wckterm'), 'checked', 'change');
-	// Hardware
 	iface.bind('/hardware/aesin', ',i', document.getElementById('hardware-aesin'), 'selectedIndex', 'change');
 	iface.bind('/hardware/opticalin', ',i', document.getElementById('hardware-opticalin'), 'selectedIndex', 'change');
 	iface.bind('/hardware/opticalout', ',i', document.getElementById('hardware-opticalout'), 'selectedIndex', 'change');
+	iface.bind('/hardware/opticalin2', ',i', document.getElementById('hardware-opticalin2'), 'selectedIndex', 'change');
 	iface.bind('/hardware/opticalout2', ',i', document.getElementById('hardware-opticalout2'), 'selectedIndex', 'change');
 	iface.bind('/hardware/spdifout', ',i', document.getElementById('hardware-spdifout'), 'selectedIndex', 'change');
 	iface.bind('/hardware/ccmix', ',i', document.getElementById('hardware-ccmix'), 'selectedIndex', 'change');
 	iface.bind('/hardware/ccmode', ',i', document.getElementById('hardware-ccmode'), 'selectedIndex', 'change');
 	iface.bind('/hardware/interfacemode', ',i', document.getElementById('hardware-interfacemode'), 'selectedIndex', 'change');
 	iface.bind('/hardware/ccrouting', ',i', document.getElementById('hardware-ccrouting'), 'selectedIndex', 'change');
-	iface.bind('/hardware/standalonemidi', ',i', document.getElementById('hardware-standalonemidi'), 'checked', 'change');
+	iface.bind('/hardware/standalonemidi', ',i', document.getElementById('hardware-standalonemidi'), 'selectedIndex', 'change');
 	iface.bind('/hardware/standalonearc', ',i', document.getElementById('hardware-standalonearc'), 'selectedIndex', 'change');
 	iface.bind('/hardware/lockkeys', ',i', document.getElementById('hardware-lockkeys'), 'selectedIndex', 'change');
 	iface.bind('/hardware/remapkeys', ',i', document.getElementById('hardware-remapkeys'), 'checked', 'change');
+	iface.bind('/hardware/programkey01', ',i', document.getElementById('hardware-programkey01'), 'selectedIndex', 'change');
+	iface.bind('/hardware/programkey02', ',i', document.getElementById('hardware-programkey02'), 'selectedIndex', 'change');
+	iface.bind('/hardware/programkey03', ',i', document.getElementById('hardware-programkey03'), 'selectedIndex', 'change');
+	iface.bind('/hardware/programkey04', ',i', document.getElementById('hardware-programkey04'), 'selectedIndex', 'change');
+	iface.bind('/hardware/lcdcontrast', ',i', document.getElementById('hardware-lcdcontrast'), 'value', 'input');
+
+	iface.bind('/hardware/madiinput', ',i', document.getElementById('hardware-madiinput'), 'selectedIndex', 'change');
+	iface.bind('/hardware/madioutput', ',i', document.getElementById('hardware-madioutput'), 'selectedIndex', 'change');
+	iface.bind('/hardware/madiframe', ',i', document.getElementById('hardware-madiframe'), 'selectedIndex', 'change');
+	iface.bind('/hardware/madiformat', ',i', document.getElementById('hardware-madiformat'), 'selectedIndex', 'change');
+	iface.bind('/hardware/eqdrecord', ',i', document.getElementById('hardware-eqdrecord'), 'checked', 'change');
+
+	iface.bind('/hardware/dspvers', ',i', document.getElementById('hardware-dspvers'), 'textContent');
+	iface.bind('/hardware/dspload', ',i', document.getElementById('hardware-dspload'), 'textContent');
+
+	iface.bind('/hardware/dspverload', ',i', document.getElementById('hardware-dspverload'), 'textContent');
+	iface.bind('/hardware/dspavail', ',i', document.getElementById('hardware-dspavail'), 'textContent');
+	iface.bind('/hardware/dspstatus', ',i', document.getElementById('hardware-dspstatus'), 'textContent');
+
 	iface.bind('/durec/file', 'i', document.getElementById('durec-file'), 'value', 'change');
 	iface.bind('/durec/record', ',i', document.getElementById('durec-record'), 'checked', 'change');
 	iface.bind('/durec/play', ',i', document.getElementById('durec-play'), 'checked', 'change');
@@ -1366,31 +1480,72 @@ function setupInterface() {
 	}
 	iface.initDurec();
 
-	document.getElementById('debug-set-register').addEventListener('click', () => {
-
-
+	document.getElementById('debug-set-register').addEventListener('click', (event) => {
+		event.preventDefault();
 		const regInput = document.getElementById('debug-register');
 		const valInput = document.getElementById('debug-value');
-
-		const register = parseInt(regInput.value);
-		const value = parseInt(valInput.value);
-
+		const register = parseInt(regInput.value.replace(/\s/g, ''), 16);
+		const value = parseInt(valInput.value.replace(/\s/g, ''), 16);
 		if (isNaN(register) || isNaN(value)) {
-			alert("Please enter valid numbers!");
+			alert("Bitte gültige Hexadezimalwerte eingeben! (z.B. 0x1234 oder 5678)");
 			return;
 		}
-
 		try {
 			iface.send('/register', ',ii', [register, value]);
-			console.log(`Register command sent: ${register} = ${value}`);
+			iface.send('/refresh', ',', []);
+			console.log(`Registerbefehl gesendet: 0x${register.toString(16)} = 0x${value.toString(16)}`);
 		} catch (e) {
-			console.error("Error sending register command:", e);
-			alert("Send failed: " + e.message);
+			console.error("Error while tried to send Reg/Val: ", e);
 		}
 	});
+
+	// Setup Store Logic
+	const storeButton = document.getElementById('store-button');
+	const setupSlots = document.querySelectorAll('.setup-slot');
+	setupSlots[0].checked = true;
+	let selectedSlot = 0;
+	setupSlots.forEach(slot => {
+		slot.addEventListener('change', () => {
+			if (slot.checked) {
+				selectedSlot = parseInt(slot.value);
+			}
+		});
+	});
+
+	storeButton.addEventListener('click', () => {
+		iface.send('/setup/store', ',i', [selectedSlot]);
+		console.log(`Setup has been stored. Slot: ${selectedSlot + 1}`);
+	});
+	// ARC LEDs
+	let arcControlWindow = null;
+	document.getElementById('open-arc-control').addEventListener('click', () => {
+		if (arcControlWindow && !arcControlWindow.closed) {
+			arcControlWindow.focus();
+		} else {
+			arcControlWindow = window.open('arc_control.html', 'ARC Control', 'width=800,height=600');
+
+			window.addEventListener('message', (event) => {
+				if (event.origin !== window.location.origin) return;
+
+				if (event.data.type === 'REQUEST_STATUS_UPDATE') {
+					if (arcControlWindow && !arcControlWindow.closed) {
+						arcControlWindow.postMessage({
+							type: 'CONNECTION_STATUS',
+							...connectionStatus
+						}, '*');
+					}
+				}
+				else if (event.data.type === 'OSC_COMMAND') {
+					console.log('Empfangener OSC-Befehl:', event.data);
+					iface.send(event.data.command, ',i', event.data.args);
+				}
+			});
+		}
+	});
+	handleStatusRequests();
+
 }
 
-// MARK: Reinitialize the UI when the current device changes
 function reinitializeUI() {
 	const inputsContainer = document.getElementById('inputs');
 	const outputsContainer = document.getElementById('outputs');
@@ -1427,7 +1582,6 @@ function reinitializeUI() {
 	console.log('UI reinitialized for device:', currentDevice.deviceName);
 }
 
-// MARK: Populate device-specific options
 function populateDeviceSpecificOptions() {
 	const standaloneMidiSelect = document.getElementById('hardware-standalonemidi');
 
@@ -1454,3 +1608,4 @@ document.addEventListener('DOMContentLoaded', () => {
 	iface.initDurec();
 	setTimeout(populateDeviceSpecificOptions, 100);
 });
+
