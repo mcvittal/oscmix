@@ -1,0 +1,377 @@
+# .github/workflows/build.yml
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+    branches:
+      - dev
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  version-info:
+    runs-on: ubuntu-latest
+    outputs:
+      is_tag: ${{ steps.vars.outputs.is_tag }}
+      version: ${{ steps.vars.outputs.version }}
+      release_name: ${{ steps.vars.outputs.release_name }}
+      release_tag: ${{ steps.vars.outputs.release_tag }}
+      artifact_version: ${{ steps.vars.outputs.artifact_version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      
+      - name: Determine version info
+        id: vars
+        run: |
+          if [[ "${GITHUB_REF_TYPE}" == "tag" ]]; then
+            # Für Tags: v1.0.0 -> 1.0.0
+            VERSION="${GITHUB_REF#refs/tags/v}"
+            RELEASE_NAME="oscmix ${VERSION}"
+            RELEASE_TAG="${GITHUB_REF_NAME}"
+            ARTIFACT_VERSION="${VERSION}"
+            IS_TAG="true"
+          else
+            # Für branches: Nightly build
+            SHORT_SHA=$(git rev-parse --short HEAD)
+            DATE=$(date +%Y-%m-%d)
+            VERSION="nightly"
+            RELEASE_NAME="oscmix Nightly (${DATE})"
+            RELEASE_TAG="nightly"
+            ARTIFACT_VERSION="${DATE}-${SHORT_SHA}"
+            IS_TAG="false"
+          fi
+          
+          echo "is_tag=${IS_TAG}" >> $GITHUB_OUTPUT
+          echo "version=${VERSION}" >> $GITHUB_OUTPUT
+          echo "release_name=${RELEASE_NAME}" >> $GITHUB_OUTPUT
+          echo "release_tag=${RELEASE_TAG}" >> $GITHUB_OUTPUT
+          echo "artifact_version=${ARTIFACT_VERSION}" >> $GITHUB_OUTPUT
+
+  build:
+    needs: version-info
+    strategy:
+      matrix:
+        include:
+          # Linux builds
+          - os: ubuntu-latest
+            platform: linux
+            arch: x86_64
+         # - os: ubuntu-24.04-arm
+         #   platform: linux
+        #    arch: arm64
+          # macOS builds
+          - os: macos-15-intel
+            platform: macos
+            arch: x86_64
+          - os: macos-latest
+            platform: macos
+            arch: arm64
+
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Install dependencies
+        run: |
+          if [ "${{ matrix.platform }}" = "linux" ]; then
+            sudo apt-get update
+            sudo apt-get install -y libasound2-dev pkg-config libgtk-3-dev libglib2.0-dev clang lld wget
+            
+            if [ "${{ matrix.arch }}" = "x86_64" ]; then
+              echo "Fetching latest WASI SDK release for x86_64..."
+              
+              DEB_URL=$(curl -s https://api.github.com/repos/WebAssembly/wasi-sdk/releases/latest | grep -o '"browser_download_url": "[^"]*-x86_64-linux\.deb"' | head -1 | cut -d'"' -f4)
+              
+              if [ -z "$DEB_URL" ]; then
+                echo "ERROR: Could not find x86_64 Linux .deb package URL"
+                exit 1
+              fi
+              
+              echo "Downloading WASI SDK from: $DEB_URL"
+              wget "$DEB_URL" -O wasi-sdk.deb
+              sudo dpkg -i wasi-sdk.deb
+              
+              echo "WASI_SDK_PATH=/opt/wasi-sdk" >> $GITHUB_ENV
+              echo "WASM_CC=/opt/wasi-sdk/bin/clang --target=wasm32-unknown-wasi" >> $GITHUB_ENV
+            fi
+            
+          elif [ "${{ matrix.platform }}" = "macos" ]; then
+            brew install gtk+3
+          fi
+          
+      - name: Build platform-specific targets
+        run: |
+          if [ "${{ matrix.platform }}" = "linux" ]; then
+            make oscmix
+            make alsarawio
+            make alsaseqio
+            make tools/regtool
+            make gtk
+            
+            # WebAssembly Build on x86_64 Linux only
+            if [ "${{ matrix.arch }}" = "x86_64" ] && [ -n "$WASM_CC" ]; then
+              make -C web WASM_CC="$WASM_CC"
+            fi
+            
+          elif [ "${{ matrix.platform }}" = "macos" ]; then
+            make oscmix
+            make coremidiio
+            make tools/regtool_generic
+            
+            export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:/usr/local/share/pkgconfig"
+            
+            cd gtk
+            make \
+                 GTK_CFLAGS="$(pkg-config --cflags gtk+-3.0)" \
+                 GTK_LDFLAGS="$(pkg-config --libs-only-L gtk+-3.0)" \
+                 GTK_LDLIBS="$(pkg-config --libs-only-l gtk+-3.0)"
+            
+            # Create App-Bundle
+            mkdir -p "oscmix-gtk.app/Contents/MacOS"
+            mkdir -p "oscmix-gtk.app/Contents/Resources"
+            
+            cp oscmix-gtk "oscmix-gtk.app/Contents/MacOS/"
+            cp *.ui "oscmix-gtk.app/Contents/Resources/"
+            cp *.css "oscmix-gtk.app/Contents/Resources/"
+            cp *.svg "oscmix-gtk.app/Contents/Resources/"
+            cp *.gschema.xml "oscmix-gtk.app/Contents/Resources/"
+            
+            cd "oscmix-gtk.app/Contents/Resources"
+            glib-compile-schemas .
+            cd ../../../
+            
+            echo '<?xml version="1.0" encoding="UTF-8"?>' > "oscmix-gtk.app/Contents/Info.plist"
+            echo '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' >> "oscmix-gtk.app/Contents/Info.plist"
+            echo '<plist version="1.0">' >> "oscmix-gtk.app/Contents/Info.plist"
+            echo '<dict>' >> "oscmix-gtk.app/Contents/Info.plist"
+            echo '    <key>CFBundleDevelopmentRegion</key>' >> "oscmix-gtk.app/Contents/Info.plist"
+            echo '    <string>en</string>' >> "oscmix-gtk.app/Contents/Info.plist"
+            echo '    <key>CFBundleExecutable</key>' >> "oscmix-gtk.app/Contents/Info.plist"
+            echo '    <string>oscmix-gtk</string>' >> "oscmix-gtk.app/Contents/Info.plist"
+            echo '    <key>CFBundleIdentifier</key>' >> "oscmix-gtk.app/Contents/Info.plist"
+            echo '    <string>com.youroscmix.oscmix-gtk</string>' >> "oscmix-gtk.app/Contents/Info.plist"
+            echo '    <key>CFBundleInfoDictionaryVersion</key>' >> "oscmix-gtk.app/Contents/Info.plist"
+            echo '    <string>6.0</string>' >> "oscmix-gtk.app/Contents/Info.plist"
+            echo '    <key>CFBundleName</key>' >> "oscmix-gtk.app/Contents/Info.plist"
+            echo '    <string>oscmix-gtk</string>' >> "oscmix-gtk.app/Contents/Info.plist"
+            echo '    <key>CFBundlePackageType</key>' >> "oscmix-gtk.app/Contents/Info.plist"
+            echo '    <string>APPL</string>' >> "oscmix-gtk.app/Contents/Info.plist"
+            echo '    <key>CFBundleShortVersionString</key>' >> "oscmix-gtk.app/Contents/Info.plist"
+            echo "    <string>${{ needs.version-info.outputs.version }}</string>" >> "oscmix-gtk.app/Contents/Info.plist"
+            echo '    <key>CFBundleVersion</key>' >> "oscmix-gtk.app/Contents/Info.plist"
+            echo "    <string>${{ needs.version-info.outputs.version }}</string>" >> "oscmix-gtk.app/Contents/Info.plist"
+            echo '    <key>NSHighResolutionCapable</key>' >> "oscmix-gtk.app/Contents/Info.plist"
+            echo '    <true/>' >> "oscmix-gtk.app/Contents/Info.plist"
+            echo '</dict>' >> "oscmix-gtk.app/Contents/Info.plist"
+            echo '</plist>' >> "oscmix-gtk.app/Contents/Info.plist"
+            cd ..
+          fi
+          
+      - name: Create package directory
+        run: |
+          ARTIFACT_NAME="oscmix-${{ needs.version-info.outputs.artifact_version }}-${{ matrix.platform }}-${{ matrix.arch }}"
+          mkdir -p "${ARTIFACT_NAME}"
+          cp oscmix "${ARTIFACT_NAME}/"
+          
+          if [ "${{ matrix.platform }}" = "linux" ]; then
+            cp alsarawio alsaseqio "${ARTIFACT_NAME}/" 2>/dev/null || true
+            cp tools/regtool "${ARTIFACT_NAME}/" 2>/dev/null || true
+            cp gtk/oscmix-gtk "${ARTIFACT_NAME}/" 2>/dev/null || true
+          elif [ "${{ matrix.platform }}" = "macos" ]; then
+            cp coremidiio "${ARTIFACT_NAME}/" 2>/dev/null || true
+            cp tools/regtool_generic "${ARTIFACT_NAME}/regtool" 2>/dev/null || true
+            cp -R gtk/oscmix-gtk.app "${ARTIFACT_NAME}/"
+          fi
+          
+          tar czf "${ARTIFACT_NAME}.tar.gz" "${ARTIFACT_NAME}"
+          echo "ARTIFACT_PATH=${ARTIFACT_NAME}.tar.gz" >> $GITHUB_ENV
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ matrix.platform }}-${{ matrix.arch }}
+          path: ${{ env.ARTIFACT_PATH }}
+
+      - name: Prepare web artifact (on x86_64 Linux)
+        if: matrix.platform == 'linux' && matrix.arch == 'x86_64'
+        run: |
+          mkdir -p web/pub/wasm
+          cp web/oscmix.wasm web/pub/wasm/
+          cp web/oscmix.js web/pub/wasm/ 2>/dev/null || true
+          
+          WEB_ARTIFACT_NAME="pub-${{ needs.version-info.outputs.artifact_version }}"
+          tar czf "${WEB_ARTIFACT_NAME}.tar.gz" -C web/pub .
+          echo "WEB_ARTIFACT_PATH=${WEB_ARTIFACT_NAME}.tar.gz" >> $GITHUB_ENV
+
+      - name: Upload web artifact
+        if: matrix.platform == 'linux' && matrix.arch == 'x86_64'
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-wasm
+          path: ${{ env.WEB_ARTIFACT_PATH }}
+
+  create-tag-release:
+    runs-on: ubuntu-latest
+    needs: [version-info, build]
+    if: needs.version-info.outputs.is_tag == 'true'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
+          pattern: '*'
+          merge-multiple: true
+
+      - name: Create checksums
+        run: |
+          cd artifacts
+          find . -name "*.tar.gz" -exec sh -c 'sha256sum "{}" > "{}.sha256"' \;
+
+      - name: Generate release notes
+        id: release-notes
+        run: |
+          LATEST_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          NEW_TAG=$(git describe --tags --abbrev=0 HEAD)
+          
+          if [ -z "$LATEST_TAG" ]; then
+            COMMITS=$(git log --pretty=format:"- %s (%h) by %an")
+          else
+            COMMITS=$(git log --pretty=format:"- %s (%h) by %an" $LATEST_TAG..$NEW_TAG)
+          fi
+          echo "body<<EOF" >> $GITHUB_OUTPUT
+          echo "## 🎉 Release ${{ github.ref_name }}" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "### Changes since last release" >> $GITHUB_OUTPUT
+          echo "$COMMITS" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.version-info.outputs.release_tag }}
+          name: ${{ needs.version-info.outputs.release_name }}
+          body: ${{ steps.release-notes.outputs.body }}
+          prerelease: false
+          draft: false
+          make_latest: true
+          files: |
+            ./artifacts/**/*.tar.gz
+            ./artifacts/**/*.sha256
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  create-nightly-release:
+    runs-on: ubuntu-latest
+    needs: [version-info, build]
+    if: needs.version-info.outputs.is_tag == 'false'
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: ./artifacts
+          pattern: '*'
+          merge-multiple: true
+
+      - name: Create checksums
+        run: |
+          cd artifacts
+          find . -name "*.tar.gz" -exec sh -c 'sha256sum "{}" > "{}.sha256"' \;
+          
+    
+      - name: Generate nightly release body
+        id: generate-body
+        run: |
+          # Generate commits history
+          COMMITS=$(git log --oneline -10 --pretty=format:"- %s (%h) by %an")
+          CURRENT_DATE=$(date +%Y-%m-%d)
+          
+          echo "body<<EOF" >> $GITHUB_OUTPUT
+          echo "## 🚧 Nightly Build" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "This is an automated nightly build from branch '${{ github.ref_name }}'." >> $GITHUB_OUTPUT
+          echo "Nightly builds are overwritten daily." >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "### ⚠️ Note" >> $GITHUB_OUTPUT
+          echo "Features may be unstable, untested or incomplete." >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "**Build Details:**" >> $GITHUB_OUTPUT
+          echo "- Commit: \`${{ github.sha }}\`" >> $GITHUB_OUTPUT
+          echo "- Date: $CURRENT_DATE" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "### Recent Commits" >> $GITHUB_OUTPUT
+          echo "$COMMITS" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "### Download" >> $GITHUB_OUTPUT
+          echo "Pre-built binaries are available for the following platforms." >> $GITHUB_OUTPUT
+          echo "The respective oscmix-*.tar.gz package includes the follwig binaries:" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "**Linux (arm64 and x86_64)**" >> $GITHUB_OUTPUT
+          echo "- oscmix" >> $GITHUB_OUTPUT
+          echo "- alsarawio" >> $GITHUB_OUTPUT
+          echo "- alsaseqio" >> $GITHUB_OUTPUT
+          echo "- regtool" >> $GITHUB_OUTPUT
+          echo "- oscmix-gtk" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "**macOS (arm64 and x86_64)**" >> $GITHUB_OUTPUT
+          echo "- oscmix" >> $GITHUB_OUTPUT
+          echo "- coremidiio" >> $GITHUB_OUTPUT
+          echo "- regtool_generic" >> $GITHUB_OUTPUT
+          echo "- oscmix-gtk.app" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "**WEB (for own webserver)**" >> $GITHUB_OUTPUT
+          echo "The pub-*.tar.gz package contains:" >> $GITHUB_OUTPUT
+          echo "- whole webdir and includes the corresponding WebAssembly (.wasm)" >> $GITHUB_OUTPUT 
+          echo "" >> $GITHUB_OUTPUT
+          echo "### Installation" >> $GITHUB_OUTPUT
+          echo "**Linux/macOS:**" >> $GITHUB_OUTPUT
+          echo "1. Download the appropriate archive for your platform" >> $GITHUB_OUTPUT
+          echo "2. Extract: \`tar xzf oscmix-*.tar.gz\`" >> $GITHUB_OUTPUT
+          echo "3. Run: \`./oscmix-*/oscmix\` (CLI) or \`./oscmix-*/oscmix-gtk\` (GUI)" >> $GITHUB_OUTPUT
+          echo "" >> $GITHUB_OUTPUT
+          echo "**Web:**" >> $GITHUB_OUTPUT
+          echo "1. Download the \`pub-*.tar.gz\` archive" >> $GITHUB_OUTPUT
+          echo "2. Extract to your web server directory" >> $GITHUB_OUTPUT
+          echo "3. Access via browser: \`http://your-server/oscmix.html\`" >> $GITHUB_OUTPUT
+          echo "EOF" >> $GITHUB_OUTPUT
+
+      - name: Delete old nightly release
+        run: |
+          # Delete old nightly Release, if exists
+          gh release delete nightly --yes 2>/dev/null || true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create Nightly GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ needs.version-info.outputs.release_tag }}
+          name: ${{ needs.version-info.outputs.release_name }}
+          body: ${{ steps.generate-body.outputs.body }}
+          prerelease: true
+          draft: false
+          make_latest: false
+          files: |
+            ./artifacts/**/*.tar.gz
+            ./artifacts/**/*.sha256
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
