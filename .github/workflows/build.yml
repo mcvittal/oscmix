@@ -88,8 +88,8 @@ jobs:
             if [ "${{ matrix.arch }}" = "x86_64" ]; then
               echo "Fetching latest WASI SDK release for x86_64..."
               
-              DEB_URL=$(curl -s https://api.github.com/repos/WebAssembly/wasi-sdk/releases/latest | grep -o '"browser_download_url": "[^"]*-x86_64-linux\.deb"' | head -1 | cut -d'"' -f4)
-              
+              # DEB_URL=$(curl -s https://api.github.com/repos/WebAssembly/wasi-sdk/releases/latest | grep -o '"browser_download_url": "[^"]*-x86_64-linux\.deb"' | head -1 | cut -d'"' -f4)
+              DEB_URL="https://github.com/WebAssembly/wasi-sdk/releases/download/wasi-sdk-29/wasi-sdk-29.0-x86_64-linux.deb"
               if [ -z "$DEB_URL" ]; then
                 echo "ERROR: Could not find x86_64 Linux .deb package URL"
                 exit 1
