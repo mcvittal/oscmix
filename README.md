@@ -27,6 +27,12 @@ implemented in oscmix.
 WebUI for WIP State preview is available at:
 https://huddx01.github.io/oscmix/
 
+## Download
+
+Pre-Compiled binaries are available for arm64 and x86_64 architectures.
+Each arch is available for linux and darwin (macOS).
+
+Check the release section at: https://github.com/huddx01/oscmix/releases
 
 ## Usage
 
