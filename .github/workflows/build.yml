@@ -124,57 +124,109 @@ jobs:
             fi
             
           elif [ "${{ matrix.platform }}" = "macos" ]; then
+          
+            # 1. Compile gtk app with backward compatibility (min. Ventura required)
+            export CFLAGS="-mmacosx-version-min=13.0"
+            export LDFLAGS="-mmacosx-version-min=13.0"
+            export CXXFLAGS="-mmacosx-version-min=13.0"
+            
             make oscmix
             make coremidiio
             make tools/regtool_generic
             
-            export PKG_CONFIG_PATH="/usr/local/lib/pkgconfig:/usr/local/share/pkgconfig"
+            export PKG_CONFIG_PATH="$(brew --prefix)/lib/pkgconfig:$(brew --prefix)/share/pkgconfig"
             
             cd gtk
             make \
-                 GTK_CFLAGS="$(pkg-config --cflags gtk+-3.0)" \
-                 GTK_LDFLAGS="$(pkg-config --libs-only-L gtk+-3.0)" \
-                 GTK_LDLIBS="$(pkg-config --libs-only-l gtk+-3.0)"
+              GTK_CFLAGS="$(pkg-config --cflags gtk+-3.0) $CFLAGS" \
+              GTK_LDFLAGS="$(pkg-config --libs-only-L gtk+-3.0) $LDFLAGS" \
+              GTK_LDLIBS="$(pkg-config --libs-only-l gtk+-3.0)"
             
-            # Create App-Bundle
-            mkdir -p "oscmix-gtk.app/Contents/MacOS"
-            mkdir -p "oscmix-gtk.app/Contents/Resources"
+            # 2. Setup App-Bundle Structure
+            APP_NAME="oscmix-gtk.app"
+            mkdir -p "$APP_NAME/Contents/MacOS"
+            mkdir -p "$APP_NAME/Contents/Resources"
+            mkdir -p "$APP_NAME/Contents/Frameworks"
             
-            cp oscmix-gtk "oscmix-gtk.app/Contents/MacOS/"
-            cp *.ui "oscmix-gtk.app/Contents/Resources/"
-            cp *.css "oscmix-gtk.app/Contents/Resources/"
-            cp *.svg "oscmix-gtk.app/Contents/Resources/"
-            cp *.gschema.xml "oscmix-gtk.app/Contents/Resources/"
-            
-            cd "oscmix-gtk.app/Contents/Resources"
+            # Move binary to a temporary name so we can use a script for the main entry point
+            cp oscmix-gtk "$APP_NAME/Contents/MacOS/oscmix-gtk-bin"
+            cp *.ui *.css *.svg *.gschema.xml "$APP_NAME/Contents/Resources/"
+
+            # 3. Dynamic Dependency Bundling (Iterative approach)
+            BREW_PREFIX=$(brew --prefix)
+            EXE_PATH="$APP_NAME/Contents/MacOS/oscmix-gtk-bin"
+            FRAMEWORKS_DIR="$APP_NAME/Contents/Frameworks"
+
+            while true; do
+                FILES_TO_CHECK=$(find "$APP_NAME" -type f \( -perm -u=x -o -name "*.dylib" \))
+                NEW_DEPS_FOUND=false
+                for TARGET in $FILES_TO_CHECK; do
+                    DEPS=$(otool -L "$TARGET" | grep "$BREW_PREFIX" | awk '{print $1}')
+                    for DEP_PATH in $DEPS; do
+                        LIB_FILE=$(basename "$DEP_PATH")
+                        if [ ! -f "$FRAMEWORKS_DIR/$LIB_FILE" ]; then
+                            cp "$DEP_PATH" "$FRAMEWORKS_DIR/"
+                            chmod 755 "$FRAMEWORKS_DIR/$LIB_FILE"
+                            NEW_DEPS_FOUND=true
+                        fi
+                        if [[ "$TARGET" == *.dylib ]]; then
+                            install_name_tool -change "$DEP_PATH" "@loader_path/$LIB_FILE" "$TARGET"
+                        else
+                            install_name_tool -change "$DEP_PATH" "@executable_path/../Frameworks/$LIB_FILE" "$TARGET"
+                        fi
+                    done
+                done
+                if [ "$NEW_DEPS_FOUND" = false ]; then break; fi
+            done
+
+            for BUNDLED_LIB in "$FRAMEWORKS_DIR"/*.dylib; do
+                install_name_tool -id "@rpath/$(basename "$BUNDLED_LIB")" "$BUNDLED_LIB"
+            done
+
+            # 4. Bundle SVG Loaders for GdkPixbuf
+            LOADERS_DIR="$APP_NAME/Contents/Resources/lib/gdk-pixbuf-2.0/2.10.0/loaders"
+            mkdir -p "$LOADERS_DIR"
+            SVG_LOADER=$(find "$BREW_PREFIX/lib/gdk-pixbuf-2.0" -name "libpixbufloader-svg.so" | head -n 1)
+            if [ -n "$SVG_LOADER" ]; then
+                cp "$SVG_LOADER" "$LOADERS_DIR/"
+                # Relink the loader itself since it's a plugin
+                install_name_tool -id "@rpath/libpixbufloader-svg.so" "$LOADERS_DIR/libpixbufloader-svg.so"
+                # Generate cache file
+                gdk-pixbuf-query-loaders "$LOADERS_DIR/libpixbufloader-svg.so" > "$APP_NAME/Contents/Resources/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache"
+                # Make paths in cache relative
+                sed -i '' "s|$LOADERS_DIR/||g" "$APP_NAME/Contents/Resources/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache"
+            fi
+
+            # 5. Create Launcher Script (The double-click entry point)
+            LAUNCHER="$APP_NAME/Contents/MacOS/oscmix-gtk"
+            echo '#!/bin/bash' > "$LAUNCHER"
+            echo 'DIR=$(cd "$(dirname "$0")"; pwd)' >> "$LAUNCHER"
+            echo 'RESOURCES="$DIR/../Resources"' >> "$LAUNCHER"
+            echo 'export GSETTINGS_SCHEMA_DIR="$RESOURCES"' >> "$LAUNCHER"
+            echo 'export GDK_PIXBUF_MODULE_FILE="$RESOURCES/lib/gdk-pixbuf-2.0/2.10.0/loaders.cache"' >> "$LAUNCHER"
+            echo 'export GDK_PIXBUF_MODULEDIR="$RESOURCES/lib/gdk-pixbuf-2.0/2.10.0/loaders"' >> "$LAUNCHER"
+            echo 'exec "$DIR/oscmix-gtk-bin" "$@"' >> "$LAUNCHER"
+            chmod +x "$LAUNCHER"
+
+            # 6. Finalize Resources and Info.plist
+            cd "$APP_NAME/Contents/Resources"
             glib-compile-schemas .
             cd ../../../
-            
-            echo '<?xml version="1.0" encoding="UTF-8"?>' > "oscmix-gtk.app/Contents/Info.plist"
-            echo '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' >> "oscmix-gtk.app/Contents/Info.plist"
-            echo '<plist version="1.0">' >> "oscmix-gtk.app/Contents/Info.plist"
-            echo '<dict>' >> "oscmix-gtk.app/Contents/Info.plist"
-            echo '    <key>CFBundleDevelopmentRegion</key>' >> "oscmix-gtk.app/Contents/Info.plist"
-            echo '    <string>en</string>' >> "oscmix-gtk.app/Contents/Info.plist"
-            echo '    <key>CFBundleExecutable</key>' >> "oscmix-gtk.app/Contents/Info.plist"
-            echo '    <string>oscmix-gtk</string>' >> "oscmix-gtk.app/Contents/Info.plist"
-            echo '    <key>CFBundleIdentifier</key>' >> "oscmix-gtk.app/Contents/Info.plist"
-            echo '    <string>com.youroscmix.oscmix-gtk</string>' >> "oscmix-gtk.app/Contents/Info.plist"
-            echo '    <key>CFBundleInfoDictionaryVersion</key>' >> "oscmix-gtk.app/Contents/Info.plist"
-            echo '    <string>6.0</string>' >> "oscmix-gtk.app/Contents/Info.plist"
-            echo '    <key>CFBundleName</key>' >> "oscmix-gtk.app/Contents/Info.plist"
-            echo '    <string>oscmix-gtk</string>' >> "oscmix-gtk.app/Contents/Info.plist"
-            echo '    <key>CFBundlePackageType</key>' >> "oscmix-gtk.app/Contents/Info.plist"
-            echo '    <string>APPL</string>' >> "oscmix-gtk.app/Contents/Info.plist"
-            echo '    <key>CFBundleShortVersionString</key>' >> "oscmix-gtk.app/Contents/Info.plist"
-            echo "    <string>${{ needs.version-info.outputs.version }}</string>" >> "oscmix-gtk.app/Contents/Info.plist"
-            echo '    <key>CFBundleVersion</key>' >> "oscmix-gtk.app/Contents/Info.plist"
-            echo "    <string>${{ needs.version-info.outputs.version }}</string>" >> "oscmix-gtk.app/Contents/Info.plist"
-            echo '    <key>NSHighResolutionCapable</key>' >> "oscmix-gtk.app/Contents/Info.plist"
-            echo '    <true/>' >> "oscmix-gtk.app/Contents/Info.plist"
-            echo '</dict>' >> "oscmix-gtk.app/Contents/Info.plist"
-            echo '</plist>' >> "oscmix-gtk.app/Contents/Info.plist"
-            cd ..
+
+            PLIST="$APP_NAME/Contents/Info.plist"
+            echo '<?xml version="1.0" encoding="UTF-8"?>' > "$PLIST"
+            echo '<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">' >> "$PLIST"
+            echo '<plist version="1.0">' >> "$PLIST"
+            echo '<dict>' >> "$PLIST"
+            echo '    <key>CFBundleExecutable</key><string>oscmix-gtk</string>' >> "$PLIST"
+            echo '    <key>CFBundleIdentifier</key><string>de.sndtek.oscmix-gtk</string>' >> "$PLIST"
+            echo '    <key>CFBundleName</key><string>oscmix-gtk</string>' >> "$PLIST"
+            echo '    <key>CFBundlePackageType</key><string>APPL</string>' >> "$PLIST"
+            echo '    <key>CFBundleShortVersionString</key><string>${{ needs.version-info.outputs.version }}</string>' >> "$PLIST"
+            echo '    <key>CFBundleVersion</key><string>${{ needs.version-info.outputs.version }}</string>' >> "$PLIST"
+            echo '    <key>LSMinimumSystemVersion</key><string>13.0</string>' >> "$PLIST"
+            echo '    <key>NSHighResolutionCapable</key><true/>' >> "$PLIST"
+            echo '</dict></plist>' >> "$PLIST"
           fi
           
       - name: Create package directory
