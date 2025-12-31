@@ -48,7 +48,9 @@ sudo apt install -y libasound2-dev pkg-config libgtk-3-dev libglib2.0-dev clang 
 **TODO** Document the dependancies for macOS here.
 
 ### 2. Download Repository
-- 2a) If you want use this dev branch:
+First, decide which repo/branch fits your needs/unit.
+
+- 2a) If you want use this repo's dev branch:
 ```shell
 git clone https://github.com/huddx01/oscmix.git
 cd oscmix
