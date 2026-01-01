@@ -1,7 +1,14 @@
+⚠️ Note
+
+You have reached my dev branch which is a fork of https://github.com/michaelforney/oscmix.
+
+Keep in mind that this content may be untested/experimental/wip state.
+
+
 # oscmix
 [![Build and Release](https://github.com/huddx01/oscmix/actions/workflows/build.yml/badge.svg?branch=dev)](https://github.com/huddx01/oscmix/actions/workflows/build.yml)
  
-oscmix implements an OSC API for RME's Fireface UCX II running in
+oscmix implements an OSC API for some RME's Fireface units running in
 class-compliant mode, allowing full control of the device's
 functionality through OSC on POSIX operating systems supporting USB
 MIDI.
@@ -23,8 +30,7 @@ implemented in oscmix.
 - RME Fireface UCX
 - RME Fireface UFX+
 
-WebUI for WIP State preview is available at:
-https://huddx01.github.io/oscmix/
+
 
 ## Download
 
@@ -37,7 +43,7 @@ Check the release section at: https://github.com/huddx01/oscmix/releases
 
 If you prefer building your own from the sources, follow the steps below...
 
-### 1. Install Dependancies
+### 1. Install Dependencies
 
 #### For Debian/Ubuntu:
 ```shell
@@ -45,7 +51,7 @@ sudo apt update
 sudo apt install -y libasound2-dev pkg-config libgtk-3-dev libglib2.0-dev clang lld git
 ```
 #### For Darwin(macOS):
-**TODO** Document the dependancies for macOS here.
+**TODO** Document the dependencies for macOS here.
 
 ### 2. Download Repository
 First, decide which repo/branch fits your needs/unit.
@@ -72,7 +78,7 @@ make alsarawio
 make gtk
 make tools/regtool
 ```
-If you want to build the wasm too (needed for own webserver), you'll need additional dependancies. 
+If you want to build the wasm too (needed for own webserver), you'll need additional dependencies. 
 See: https://github.com/huddx01/oscmix/tree/dev?tab=readme-ov-file#web-ui
 
 ## General Oscmix Usage
@@ -204,8 +210,9 @@ Note: you can also set MIDIPORT env variable to 'Fireface 802 (12345678) Port 2'
 The [gtk](gtk) directory contains oscmix-gtk, a GTK frontend that
 communicates with oscmix using OSC.
 
-![oscmix-gtk](https://mforney.org/misc/oscmix.png)
+<img width="1847" height="1073" alt="gtk" src="https://github.com/user-attachments/assets/58fcf6dc-6342-42e0-8d7c-7e351599b573" />
 
+### Running GTK UI
 To run oscmix-gtk without installing, set the `GSETTINGS_SCHEMA_DIR`
 environment variable.
 
@@ -219,10 +226,11 @@ The [web](web) directory contains a web frontend that can communicate
 with oscmix through OSC over a WebSocket, or by directly to an
 instance of oscmix compiled as WebAssembly running directly in the browser.
 
-![oscmix-web]
+<img width="1930" height="1095" alt="oscmix-web" src="https://github.com/user-attachments/assets/4bcc5755-0c3d-47cc-b5a9-a73a9178bcf3" />
 
-The web UI is automatically deployed at
-[https://michaelforney.github.io/oscmix](https://michaelforney.github.io/oscmix).
+
+The web UI for this fork/dev branch is automatically deployed at
+[https://huddx01.github.io/oscmix](https://huddx01.github.io/oscmix).
 
 It is tested primarily against the chromium stable channel, but
 patches to support other/older browsers are welcome (if it doesn't
@@ -241,7 +249,6 @@ s6-tcpserver 127.0.0.1 8222 wsdgram
 To build `oscmix.wasm`, you need `clang` supporting wasm32, `wasm-ld`,
 and `wasi-libc`.
 
-[oscmix-web]: https://github.com/michaelforney/oscmix/assets/52851/ef22e75e-9d38-4c82-b016-81bce77be571
 [s6-tcpserver]: https://skarnet.org/software/s6-networking/s6-tcpserver.html
 [s6-tlsserver]: https://skarnet.org/software/s6-networking/s6-tlsserver.html
 
