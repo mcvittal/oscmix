@@ -81,7 +81,7 @@ regtoctl(int reg, struct param *p)
 				return -1;
 			p->out = idx;
 			flags = outputs[idx].flags;
-			if (reg < 0x0D) {
+			if (reg < 0x0C) {
 				reg |= 0x05A0;
 			}
 		}
