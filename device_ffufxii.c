@@ -86,6 +86,7 @@ regtoctl(int reg, struct param *p)
 			}
 		}
 	}
+	/*
 	else if (reg - 0x30A0U < 0x20 * LEN(outputs)) {
 
 		unsigned base = reg - 0x30A0;
@@ -128,6 +129,7 @@ regtoctl(int reg, struct param *p)
 			default: return -1;
 		}
 	}
+	*/
 	else if (reg >= 0x0B40 && reg < 0x0C1C) {
 		idx = (reg - 0x0B40) / 0x0A;
 		unsigned par = reg - (0x0B40 + 0x0A * idx);
@@ -439,6 +441,7 @@ static int ctltoreg(enum control ctl, const struct param *p)
 		case HARDWARE_ARCDELTA:       return 0x3203;
 		case HARDWARE_ARCBUTTONS:     return 0x3204;
 
+		/*
 		case ROOMEQ_DELAY:            reg = 0x30A0; goto roomeq;
 		case ROOMEQ:                  reg = 0x30A1; goto roomeq;
 		case ROOMEQ_BAND1TYPE:        reg = 0x30A2; goto roomeq;
@@ -474,6 +477,7 @@ static int ctltoreg(enum control ctl, const struct param *p)
 		roomeq:
 			if (p->out == -1) break;
 			return reg + (p->out << 5);
+		*/
 		case SETUP_ARCLEDS:           return 0x3E02;
 		case REFRESH:                 return 0x3E03;
 		case SETUP_STORE:             return 0x3E06;
@@ -492,7 +496,7 @@ const struct device ffufxii = {
 	.id = "ffufxii",
 	.name = "Fireface UFX II",
 	.version = 01,
-	.flags = DEVICE_HAS_DUREC | DEVICE_HAS_ROOMEQ,
+	.flags = DEVICE_HAS_DUREC, //| DEVICE_HAS_ROOMEQ,
 	.inputs = inputs,
 	.inputslen = LEN(inputs),
 	.outputs = outputs,
