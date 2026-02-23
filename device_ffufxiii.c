@@ -160,7 +160,7 @@ regtoctl(int reg, struct param *p)
 		case 0x0003: return INPUT_RECORD;
 		case 0x0004: return UNKNOWN;
 		case 0x0005: return INPUT_PLAYCHAN;
-		case 0x0006: return INPUT_WIDTH;
+		//case 0x0006: return INPUT_WIDTH;
 		case 0x0007: return INPUT_MSPROC;
 		case 0x0008: return INPUT_PHASE;
 		case 0x0009: return INPUT_GAIN;
@@ -309,7 +309,7 @@ static int ctltoreg(enum control ctl, const struct param *p)
 		case INPUT_STEREO:      reg = 0x02; goto channel;
 		case INPUT_RECORD:      reg = 0x03; goto channel;
 		case INPUT_PLAYCHAN:    reg = 0x05; goto channel;
-		case INPUT_WIDTH:       reg = 0x06; goto channel;
+		//case INPUT_WIDTH:       reg = 0x06; goto channel;
 		case INPUT_MSPROC:      reg = 0x07; goto channel;
 		case INPUT_PHASE:       reg = 0x08; goto channel;
 		case INPUT_GAIN:        if (!(flags & INPUT_HAS_GAIN)) break;
