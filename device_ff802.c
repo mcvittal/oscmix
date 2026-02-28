@@ -347,7 +347,7 @@ ctltoreg(enum control ctl, const struct param *p)
 const struct device ff802 = {
 	.id = "ff802",
 	.name = "Fireface 802",
-	.version = 30,
+	.version = 9,
 	.flags = 0,
 	.inputs = inputs,
 	.inputslen = LEN(inputs),
