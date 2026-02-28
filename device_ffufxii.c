@@ -278,13 +278,12 @@ regtoctl(int reg, struct param *p)
 		case 0x3D44: return HARDWARE_CCMODE;
 		//case 0x3D45: return HARDWARE_STANDALONEARC;
 		case 0x3E02: return SETUP_ARCLEDS;
-
 	}
 	return -1;
 }
 static int ctltoreg(enum control ctl, const struct param *p)
 {
-	int reg, reg_out, idx = -1, flags = 0;
+	int reg, idx = -1, flags = 0;
 	if ((unsigned)p->in < LEN(inputs)) {
 		flags = inputs[p->in].flags;
 		idx = p->in;
