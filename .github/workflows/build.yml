@@ -274,12 +274,12 @@ jobs:
           name: web-wasm
           path: ${{ env.WEB_ARTIFACT_PATH }}
 
-  commit-wasm-to-dev:
+  commit-wasm-and-deploy:
     runs-on: ubuntu-latest
     needs: [build]
     # Only run on dev branch pushes, not on tag builds
     if: github.ref == 'refs/heads/dev' && github.event_name == 'push'
-    
+
     steps:
       - name: Checkout dev branch
         uses: actions/checkout@v4
@@ -293,26 +293,58 @@ jobs:
           name: web-wasm
           path: web-artifact
 
-      - name: Extract and copy wasm to repo
+      - name: Extract and copy wasm into repo
         run: |
           tar xzf web-artifact/*.tar.gz -C web-artifact --wildcards '*.wasm' --strip-components=1 2>/dev/null || \
           tar xzf web-artifact/*.tar.gz -C web-artifact
-          
+
           mkdir -p web/pub/wasm
           find web-artifact -name "oscmix.wasm" -exec cp {} web/pub/wasm/oscmix.wasm \;
 
-      - name: Commit and push updated wasm
+      - name: Commit and push updated wasm to dev
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add web/pub/wasm/oscmix.wasm
           if git diff --staged --quiet; then
-            echo "No changes – wasm unchanged."
+            echo "wasm unchanged – skipping commit"
           else
-            # No [skip ci] here – deploy-pages.yml must pick this up.
-            # build.yml will NOT retrigger because web/pub/** is not in its paths filter.
             git commit -m "ci: update oscmix.wasm"
             git push origin dev
+          fi
+
+      - name: Checkout gh-pages branch (create if not exists)
+        run: |
+          git clone --branch gh-pages \
+            https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git \
+            gh-pages-repo 2>/dev/null || \
+          (
+            mkdir gh-pages-repo && cd gh-pages-repo
+            git init
+            git remote add origin https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git
+            git checkout --orphan gh-pages
+          )
+
+      - name: Sync web/pub into gh-pages
+        run: |
+          cd gh-pages-repo
+          # Remove all tracked files except .git
+          find . -mindepth 1 -not -path './.git*' -delete
+          # web/pub now contains the freshly updated wasm (copied above)
+          cp -r ../web/pub/. .
+
+      - name: Commit and push to gh-pages
+        run: |
+          cd gh-pages-repo
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --quiet && git diff --staged --quiet; then
+            echo "No changes to deploy – gh-pages up to date."
+          else
+            SHORT_SHA=$(cd .. && git rev-parse --short HEAD)
+            git commit -m "ci: deploy web/pub from dev@${SHORT_SHA}"
+            git push origin gh-pages
           fi
 
   create-tag-release:
