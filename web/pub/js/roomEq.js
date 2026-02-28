@@ -318,10 +318,10 @@ window.addEventListener('mousemove',e=>{
 		const {key, startY, startVal} = extraKnobDrag;
 		const dy = startY - e.clientY;
 		if (key==='delay')  delay  = Math.round(Math.max(0,    Math.min(42.50, startVal + dy*(42.50/130)))*100)/100;
-																							  if (key==='volCal') volCal = Math.round(Math.max(-24.0, Math.min(3.0,  startVal + dy*(27.0/130)))*10)/10;
-																																													drawExtraKnob(key);
-																																													showTooltip(extraTooltipStr(key));
-																																													}
+		if (key==='volCal') volCal = Math.round(Math.max(-24.0, Math.min(3.0,  startVal + dy*(27.0/130)))*10)/10;
+		drawExtraKnob(key);
+		showTooltip(extraTooltipStr(key));
+	}
 	if (!knobDrag) return;
 	const {bi,param,startY,startVal}=knobDrag;
 	const dy=startY-e.clientY;
@@ -1024,7 +1024,7 @@ window.addEventListener('message', (e) => {
 if (oscChannel) {
 	document.title = `Room EQ — ${oscChannel}`;
 	const h1 = document.querySelector('h1');
-	if (h1) h1.textContent = `Room EQ [${oscChannel}] v.0.0.1`;
+	if (h1) h1.textContent = `Room EQ ${oscChannel}`;
 }
 
 // ════════════════════════════════════════════════
