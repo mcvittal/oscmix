@@ -25,6 +25,7 @@ struct context {
 	char *addr, *addrpos, *addrend;
 	struct param param;
 	bool exact;
+	int reg;  /* actual register number (for name handling) */
 };
 
 struct node {
@@ -50,11 +51,13 @@ struct input {
 	bool stereo;
 	bool mute;
 	int width;
+	char name[12];
 };
 
 struct output {
 	bool stereo;
 	float *mix;
+	char name[12];
 };
 
 struct durecfile {
@@ -67,6 +70,7 @@ struct durecfile {
 
 int dflag;
 static const struct device *device;
+static char deviceuid[256];  /* "Device Name (SERIALNO)" - derived once in init() */
 static struct input *inputs;
 static struct output *outputs;
 /* FX level buffers sized device->inputslen+2 / device->outputslen+2 at init */
@@ -276,8 +280,9 @@ setmixlevel(const struct input *in, const struct output *out, float level)
 	if (val > 0x4000)
 		val = (val >> 3) - 0x8000;
 
-	fprintf(stderr, "setmixlevel reg=0x%X  in=%d out=%d val=0x%lX (level=%.3f)\n",
-			reg, p.in, p.out, val, level);
+	if (dflag)
+		fprintf(stderr, "setmixlevel in=%d out=%d reg=0x%X val=0x%lX (level=%.3f)\n",
+				p.in, p.out, reg, val, level);
 
 	setreg(reg, val);
 }
@@ -443,6 +448,59 @@ setname(struct context *ctx, struct oscmsg *msg)
 	for (i = 0; i < sizeof namebuf; i += 2, ++reg) {
 		val = getle16(namebuf + i);
 		setreg(reg, val);
+	}
+}
+
+static void
+newname(struct context *ctx, int val)
+{
+	char *namebuf;
+	int basereg, off;
+
+	/* Get pointer to the correct name buffer based on input/output */
+	if (ctx->param.in != -1) {
+		if (ctx->param.in >= device->inputslen + device->outputslen)
+			return;
+		namebuf = inputs[ctx->param.in].name;
+	} else if (ctx->param.out != -1) {
+		if (ctx->param.out >= device->outputslen)
+			return;
+		namebuf = outputs[ctx->param.out].name;
+	} else {
+		return;
+	}
+
+	/*
+	 * Get the base register for this channel's name
+	 * ctltoreg returns the FIRST register of the name block
+	 * For ffufxiii: 0x2800 + (channel_idx * 8)
+	 */
+	basereg = device->ctltoreg(NAME, &ctx->param);
+	if (basereg == -1)
+		return;
+
+	/*
+	 * Calculate byte offset within the name (0, 2, 4, 6, 8, or 10)
+	 * ctx->reg contains the actual register that triggered this call
+	 * Each register holds 2 bytes, so offset = (register_offset * 2)
+	 */
+	off = (ctx->reg - basereg) * 2;
+
+	/* Validate offset (should be 0-10 for 6 registers = 12 bytes) */
+	if (off < 0 || off > 10) {
+		if (dflag)
+			fprintf(stderr, "newname: invalid offset %d (reg=0x%X, basereg=0x%X)\n",
+					off, ctx->reg, basereg);
+		return;
+	}
+
+	/* Update the 2 bytes at this position */
+	putle16(namebuf + off, val);
+
+	/* If this is the last register (offset 10), send the complete name */
+	if (off == 10) {
+		namebuf[11] = '\0';  /* Ensure null termination */
+		oscsend(ctx->addr, ",s", namebuf);
 	}
 }
 
@@ -762,6 +820,12 @@ setmix(struct context *ctx, struct oscmsg *msg)
 	}
 	if (oscend(msg) != 0)
 		return;
+	if (dflag)
+		fprintf(stderr, "setmix: out=%lu(%s) in=%lu(%s) vol=%.1fdB pan=%d width=%d\n",
+				(unsigned long)(out - outputs) + 1, out->name,
+				(unsigned long)(in - inputs) + 1, in->name,
+				level.vol > 0 ? 20.f * log10f(level.vol) : -INFINITY,
+				level.pan, level.width);
 	setlevel(out, in, 1, &level);
 	calclevel(out, in, 0, &level);
 	setdb(out, in, 20.f * log10f(level.vol));
@@ -803,6 +867,13 @@ newmix(struct context *ctx, int val)
 		if (level.vol > 2)
 			level.vol = 2;
 	}
+	if (dflag)
+		fprintf(stderr, "newmix: out=%d(%s) in=%d(%s) %s=%d -> vol=%.1fdB pan=%d\n",
+				ctx->param.out + 1, out->name,
+				ctx->param.in + 1, in->name,
+				ispan ? "pan" : "vol", val,
+				level.vol > 0 ? 20.f * log10f(level.vol) : -INFINITY,
+				level.pan);
 	setlevel(out, in, 0, &level);
 	if (in->stereo) {
 		if ((in - inputs) & 1)
@@ -1156,11 +1227,16 @@ setsetuparcleds(struct context *ctx, struct oscmsg *msg)
 	setval(ctx, val);
 }
 
+/* djb2 hash of s, formatted as "Device Name (XXXXXXXX)" into buf. */
 static void
-newdevice(struct context *ctx, int val)
+uidfromport(const char *port, char *buf, size_t bufsz)
 {
-	(void)val;
-	oscsend("/device", ",ss", device->id, device->name);
+	uint32_t h = 5381;
+	const unsigned char *p = (const unsigned char *)port;
+
+	while (*p)
+		h = h * 33 ^ *p++;
+	snprintf(buf, bufsz, "%s (%08X)", device->name, h);
 }
 
 static void
@@ -1173,7 +1249,62 @@ setrefresh(struct context *ctx, struct oscmsg *msg)
 	dsp.vers = -1;
 	dsp.load = -1;
 	/* Send device identity first so clients can configure themselves */
-	oscsend("/device", ",ss", device->id, device->name);
+	oscsend("/device/id",   ",s", device->id);
+	oscsend("/device/name", ",s", device->name);
+	oscsend("/device/uid",  ",s", deviceuid);
+
+	oscsend("/device/flags", ",i", device->flags);
+	oscsend("/device/inputs", ",i", device->inputslen);
+	oscsend("/device/outputs", ",i", device->outputslen);
+
+	/* Send per-channel info so clients can configure their UI */
+	for (i = 0; i < device->inputslen; ++i) {
+		const struct channelinfo *ch = &device->inputs[i];
+		snprintf(addr, sizeof addr, "/input/%d/flags", i + 1);
+		oscsend(addr, ",i", ch->flags);
+		if (ch->flags & INPUT_HAS_GAIN) {
+			snprintf(addr, sizeof addr, "/input/%d/gainrange", i + 1);
+			oscsend(addr, ",ii", (int)ch->gain.min, (int)ch->gain.max);
+		}
+		if (ch->flags & INPUT_HAS_REFLEVEL && ch->reflevel.nameslen > 0) {
+			char buf[256];
+			size_t off = 0;
+			for (size_t j = 0; j < ch->reflevel.nameslen; ++j) {
+				if (j > 0 && off < sizeof buf - 1)
+					buf[off++] = ',';
+				size_t slen = strlen(ch->reflevel.names[j]);
+				if (off + slen < sizeof buf) {
+					memcpy(buf + off, ch->reflevel.names[j], slen);
+					off += slen;
+				}
+			}
+			buf[off] = '\0';
+			snprintf(addr, sizeof addr, "/input/%d/reflevels", i + 1);
+			oscsend(addr, ",s", buf);
+		}
+	}
+	for (i = 0; i < device->outputslen; ++i) {
+		const struct channelinfo *ch = &device->outputs[i];
+		snprintf(addr, sizeof addr, "/output/%d/flags", i + 1);
+		oscsend(addr, ",i", ch->flags);
+		if (ch->flags & OUTPUT_HAS_REFLEVEL && ch->reflevel.nameslen > 0) {
+			char buf[256];
+			size_t off = 0;
+			for (size_t j = 0; j < ch->reflevel.nameslen; ++j) {
+				if (j > 0 && off < sizeof buf - 1)
+					buf[off++] = ',';
+				size_t slen = strlen(ch->reflevel.names[j]);
+				if (off + slen < sizeof buf) {
+					memcpy(buf + off, ch->reflevel.names[j], slen);
+					off += slen;
+				}
+			}
+			buf[off] = '\0';
+			snprintf(addr, sizeof addr, "/output/%d/reflevels", i + 1);
+			oscsend(addr, ",s", buf);
+		}
+	}
+
 	setval(ctx, device->refresh);
 	/* FIXME: needs lock */
 	for (i = 0; i < device->outputslen; ++i) {
@@ -1288,7 +1419,7 @@ static const struct node roottree[] = {
 		{"fx", INPUT_FXSEND, .set=setfixed, .new=newfixed, .min=-650, .max=0, .scale=0.1},
 		{"stereo", INPUT_STEREO, .set=setinputstereo, .new=newinputstereo},
 		{"record", INPUT_RECORD, .set=setbool, .new=newbool},
-		{"name", NAME, .set=setname},
+		{"name", NAME, .set=setname, .new=newname},
 		{"playchan", INPUT_PLAYCHAN, .set=setint, .new=newint, .min=1, .max=60},
 		{"msproc", INPUT_MSPROC, .set=setbool, .new=newbool},
 		{"phase", INPUT_PHASE, .set=setbool, .new=newbool},
@@ -1310,7 +1441,7 @@ static const struct node roottree[] = {
 		{"fx", OUTPUT_FXRETURN, .set=setfixed, .new=newfixed, .scale=0.1, .min=-65.0, .max=0.0},
 		{"stereo", OUTPUT_STEREO, .set=setbool, .new=newoutputstereo},
 		{"record", OUTPUT_RECORD, .set=setbool, .new=newbool},
-		{"name", NAME, .set=setname},
+		{"name", NAME, .set=setname, .new=newname},
 		{"playchan", OUTPUT_PLAYCHAN, .set=setint, .new=newint},
 		{"phase", OUTPUT_PHASE, .set=setbool, .new=newbool},
 		{"reflevel", OUTPUT_REFLEVEL, .set=setenum, .new=newenum, .names=(const char *const[]){
@@ -1502,8 +1633,6 @@ static const struct node roottree[] = {
 	// I reimplemented this to be able to set regs/vals from webui for debugging/testing purposes.
 	// But its not really necessary -> commented out the function in (line 836)
 
-
-	{"device", .new=newdevice},
 	{"refresh", REFRESH, .set=setrefresh},
 	{0},
 };
@@ -1643,7 +1772,14 @@ handleregs(uint_least32_t *payload, size_t len)
 	for (i = 0; i < len; ++i) {
 		reg = payload[i] >> 16 & 0x7fff;
 		val = (long)((payload[i] & 0xffff) ^ 0x8000) - 0x8000;
+
+		/* Debug: Print NAME range registers with their values */
+		if (reg >= 0x2800 && reg < 0x2C00) {
+			fprintf(stderr, "DEBUG handleregs: reg=0x%04X, val=0x%04X (%d)\n", reg, val & 0xFFFF, val);
+		}
+
 		ctx.param.in = ctx.param.out = -1;
+		ctx.reg = reg;  /* Store actual register number */
 		ctl = device->regtoctl(reg, &ctx.param);
 		if (ctl == -1) {
 			if (dflag)
@@ -1825,8 +1961,33 @@ init(const char *port)
 		}
 	}
 	if (i == LEN(devices)) {
-		fprintf(stderr, "unsupported device '%s'\n", port);
+		fprintf(stderr, "Unsupported Device: '%s'\n", port);
 		return -1;
+	}
+
+	/* Print port and detected device name */
+	fprintf(stderr, "Detected Device: %s (ID: %s)\n", device->name, device->id);
+	fprintf(stderr, "Using MIDI Port: %s\n", port);
+
+	/* Derive UID from the first parenthesized group in the port name.
+	 * Uses only the first '(' / ')' pair to handle formats like:
+	 *   "Fireface UCX II (12345678):Fireface UCX II (12345678) Port 2"
+	 *   "Fireface UCX II (12345678) 16:1"
+	 * Falls back to a deterministic djb2 hash when no serial is present. */
+	{
+	const char *open  = strchr(port, '(');
+	const char *close = open ? strchr(open, ')') : NULL;
+	if (open && close) {
+		size_t len = (size_t)(close - port) + 1;
+		if (len < sizeof deviceuid) {
+			memcpy(deviceuid, port, len);
+			deviceuid[len] = '\0';
+		} else {
+			uidfromport(port, deviceuid, sizeof deviceuid);
+		}
+	} else {
+		uidfromport(port, deviceuid, sizeof deviceuid);
+	}
 	}
 
 	memset(nodeindex, 0xFF, sizeof nodeindex);
@@ -1860,4 +2021,14 @@ init(const char *port)
 		}
 	}
 	return 0;
+}
+
+void
+oscmix_getdevinfo(struct oscmix_devinfo *out)
+{
+	out->id      = device ? device->id : NULL;
+	out->uid     = deviceuid;
+	out->flags   = device ? device->flags : 0;
+	out->inputs  = device ? device->inputslen : 0;
+	out->outputs = device ? device->outputslen : 0;
 }

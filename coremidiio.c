@@ -225,7 +225,7 @@ initreader(struct context *ctx, MIDIClientRef client, CFStringRef name, int inde
 		ctx->port = 0;
 		err = MIDIDestinationCreate(client, name, midiread, ctx, &ctx->ep);
 		if (err)
-			fatal("MIDIDestinationCreate: %d");
+			fatal("MIDIDestinationCreate: %d", err);
 	}
 }
 

@@ -16,6 +16,10 @@
 #include "socket.h"
 #include "util.h"
 
+#ifdef HAVE_MDNS
+#include "mdns.h"
+#endif
+
 extern int dflag;
 static int lflag;
 static int rfd, wfd;
@@ -24,19 +28,25 @@ static volatile sig_atomic_t timeout;
 static void
 usage(int status)
 {
-	fprintf(stderr, "usage: oscmix [-dhlm] [-p port] [-r addr] [-s addr]\n");
+	fprintf(stderr, "usage: oscmix [-dhlmz] [-p port] [-r addr] [-s addr]\n");
 	fprintf(stderr, "  -d        enable debug output\n");
 	fprintf(stderr, "  -h        show this help\n");
 	fprintf(stderr, "  -l        disable level metering\n");
-	fprintf(stderr, "  -m        send to multicast address (udp!224.0.0.1!8222)\n");
+	fprintf(stderr, "  -m [port] send to multicast address (udp!224.0.0.1!port, default port: 8222)\n");
 	fprintf(stderr, "  -p port   MIDI port (default: $MIDIPORT)\n");
 	fprintf(stderr, "  -r addr   OSC receive address (default: udp!127.0.0.1!7222)\n");
 	fprintf(stderr, "  -s addr   OSC send address (default: udp!127.0.0.1!8222)\n");
-	fprintf(stderr, "\nexamples:\n");
-	fprintf(stderr, "  alsarawio 0,0,0 oscmix\n");
+	fprintf(stderr, "  -z        register OSC service via mDNS/DNS-SD\n");
+	fprintf(stderr, "\nexamples (Linux):\n");
+	fprintf(stderr, "  alsarawio 0,0,3 oscmix\n");
 	fprintf(stderr, "  alsaseqio 16:0 oscmix\n");
 	fprintf(stderr, "  alsaseqio 16:0 oscmix -r udp!0.0.0.0!7222 -s udp!192.168.1.100!8222\n");
-	fprintf(stderr, "  alsaseqio 16:0 oscmix -m\n");
+	fprintf(stderr, "  alsaseqio 16:0 oscmix -m 8233 -z\n");
+	fprintf(stderr, "\nexamples (macOS):\n");
+	fprintf(stderr, "  coremidiio -f 6,7 -p 2 oscmix\n");
+	fprintf(stderr, "  coremidiio -f 6,7 -p 2 oscmix -m -z\n");
+	fprintf(stderr, "  MIDIPORT='Fireface 802 (12345678) Port 2' coremidiio -f 6,7 oscmix -m -z\n");
+	fprintf(stderr, "  coremidiio -f 6,7 -p 20 oscmix -p 'Fireface 802 (12345678) Port 2' -z -m8223\n");
 	exit(status);
 }
 
@@ -132,13 +142,15 @@ main(int argc, char *argv[])
 {
 	static char defrecvaddr[] = "udp!127.0.0.1!7222";
 	static char defsendaddr[] = "udp!127.0.0.1!8222";
-	static char mcastaddr[] = "udp!224.0.0.1!8222";
+	static char mcastaddr[]   = "udp!224.0.0.1!8222";
 	static const unsigned char refreshosc[] = "/refresh\0\0\0\0,\0\0\0";
+	char mcastbuf[48];
 	char *recvaddr, *sendaddr;
 	struct itimerval it;
 	struct sigaction sa;
 	struct pollfd pfd[2];
 	const char *port;
+	int mflag = 0, zflag = 0;
 
 	recvaddr = defrecvaddr;
 	sendaddr = defsendaddr;
@@ -154,27 +166,61 @@ main(int argc, char *argv[])
 	case 'l':
 		lflag = 1;
 		break;
+	case 'm': {
+		/* Optional port: -m 8233 or -m8233 (default: 8222).
+		 * Next arg is consumed only if it looks like a port number. */
+		const char *mport = NULL;
+		if (*(opt_ + 1)) {
+			mport = opt_ + 1;
+			done_ = 1;
+		} else if (argc > 1 && argv[1][0] >= '0' && argv[1][0] <= '9') {
+			mport = *++argv;
+			--argc;
+		}
+		snprintf(mcastbuf, sizeof mcastbuf, "udp!224.0.0.1!%.10s",
+				 mport ? mport : "8222");
+		sendaddr = mcastbuf;
+		mflag = 1;
+		break;
+	}
 	case 'r':
 		recvaddr = EARGF(usage(1));
 		break;
 	case 's':
 		sendaddr = EARGF(usage(1));
 		break;
-	case 'm':
-		sendaddr = mcastaddr;
-		break;
 	case 'p':
 		port = EARGF(usage(1));
+		break;
+	case 'z':
+		zflag = 1;
 		break;
 	default:
 		usage(1);
 		break;
 	} ARGEND
 
-	if (fcntl(6, F_GETFD) < 0)
-		fatal("fcntl 6:");
-	if (fcntl(7, F_GETFD) < 0)
-		fatal("fcntl 7:");
+	/* Detect multicast send address even when set via -s instead of -m.
+	 * Multicast range: 224.0.0.0/4 (first octet 224-239).
+	 * Address format: "udp!<addr>!<port>" - IP starts after first '!'. */
+	if (!mflag) {
+		const char *first = strchr(sendaddr, '!');
+		if (first) {
+			int octet = atoi(first + 1);
+			if (octet >= 224 && octet <= 239)
+				mflag = 1;
+		}
+	}
+
+	if (fcntl(6, F_GETFD) < 0 || fcntl(7, F_GETFD) < 0) {
+		fprintf(stderr, "error: MIDI file descriptors 6 and 7 are not open.\n"
+				"       Use alsarawio, alsaseqio (Linux) or coremidiio (macOS)\n"
+				"       to set up MIDI I/O before invoking oscmix.\n\n");
+		usage(1);
+	}
+
+	uint16_t recvport = sockaddrport(recvaddr);
+	uint16_t sendport = sockaddrport(sendaddr);
 
 	rfd = sockopen(recvaddr, 1);
 	wfd = sockopen(sendaddr, 0);
@@ -186,6 +232,47 @@ main(int argc, char *argv[])
 	}
 	if (init(port) != 0)
 		return 1;
+
+#ifdef HAVE_MDNS
+	if (zflag) {
+		struct oscmix_devinfo dev;
+		char svc_name[320];
+		char txt_id[80], txt_uid[320], txt_flags[32];
+		char txt_inputs[32], txt_outputs[32];
+		char txt_recvport[32], txt_sendport[32], txt_mcast[16];
+
+		oscmix_getdevinfo(&dev);
+
+		/* Service instance name: "oscmix @ <uid>" */
+		snprintf(svc_name,    sizeof svc_name,    "oscmix @ %s",   dev.uid ? dev.uid : "unknown");
+		snprintf(txt_id,      sizeof txt_id,      "id=%s",          dev.id  ? dev.id  : "");
+		snprintf(txt_uid,     sizeof txt_uid,     "uid=%s",         dev.uid ? dev.uid : "");
+		snprintf(txt_flags,   sizeof txt_flags,   "flags=%d",       dev.flags);
+		snprintf(txt_inputs,  sizeof txt_inputs,  "inputs=%d",      dev.inputs);
+		snprintf(txt_outputs, sizeof txt_outputs, "outputs=%d",     dev.outputs);
+		snprintf(txt_recvport,sizeof txt_recvport,"recvport=%u",    recvport);
+		snprintf(txt_sendport,sizeof txt_sendport,"sendport=%u",    sendport);
+		snprintf(txt_mcast,   sizeof txt_mcast,   "mcast=%d",       mflag);
+
+		const char *txt[] = {
+			"txtvers=1",
+			"version=1.1",
+			"uri=oscmix",
+			"types=ifs",
+			txt_id,
+			txt_uid,
+			txt_flags,
+			txt_inputs,
+			txt_outputs,
+			txt_recvport,
+			txt_sendport,
+			txt_mcast,
+			NULL
+		};
+
+		mdns_register(svc_name, recvport, txt);
+	}
+#endif /* HAVE_MDNS */
 
 	memset(&sa, 0, sizeof sa);
 	sa.sa_handler = sighandler;
