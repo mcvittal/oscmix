@@ -751,7 +751,7 @@ calclevel(const struct output *out, const struct input *in, bool instereo, struc
 			l->width = lroundf(100 * w);
 		} else {
 			l->vol = sqrtf(ll * ll + lr * lr);
-			l->pan = lroundf(acosf(ll / l->vol) * 400.f / PI - 100.f);
+			l->pan = l->vol > 0.f ? lroundf(acosf(ll / l->vol) * 400.f / PI - 100.f) : 0;
 		}
 	} else {
 		ll = out[0].mix[ich];
